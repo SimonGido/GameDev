@@ -302,7 +302,7 @@ void PerformStep(inout RaymarchState state, ivec3 step, vec3 delta)
 
 
 
-RaymarchState CreateRaymarchState(in Ray ray, vec3 origin, vec3 direction, ivec3 step, ivec3 maxSteps, float voxelSize, ivec3 decompressedVoxelOffset)
+RaymarchState CreateRaymarchState(in Ray ray, vec3 origin, ivec3 step, ivec3 maxSteps, float voxelSize, ivec3 decompressedVoxelOffset)
 {
 	RaymarchState state;
 	state.Distance					= distance(ray.Origin, origin);
@@ -315,7 +315,7 @@ RaymarchState CreateRaymarchState(in Ray ray, vec3 origin, vec3 direction, ivec3
 		float((step.z > 0) ? state.CurrentVoxel.z + 1 : state.CurrentVoxel.z) * voxelSize
 	);
 
-	state.Max = (next_boundary - origin) / direction; // we will move along the axis with the smallest value
+	state.Max = (next_boundary - origin) / ray.Direction; // we will move along the axis with the smallest value
 	state.Normal = GetNormalFromState(state, step);
 	return state;
 }
@@ -360,7 +360,7 @@ void RayMarch(in Ray ray, inout RaymarchState state, vec3 delta, ivec3 step, in 
 	}
 }
 
-RaymarchResult RayMarchSteps(in Ray ray, vec4 startColor, vec3 origin, vec3 direction, in VoxelModel model, float currentDistance, ivec3 maxSteps, ivec3 decompressedVoxelOffset)
+RaymarchResult RayMarchSteps(in Ray ray, vec4 startColor, vec3 origin, in VoxelModel model, float currentDistance, ivec3 maxSteps, ivec3 decompressedVoxelOffset)
 {
 	RaymarchResult result;
 	result.Color	= startColor;
@@ -368,15 +368,15 @@ RaymarchResult RayMarchSteps(in Ray ray, vec4 startColor, vec3 origin, vec3 dire
 	result.Distance	= 0.0;
 
 	ivec3 step = ivec3(
-		(direction.x > 0.0) ? 1 : -1,
-		(direction.y > 0.0) ? 1 : -1,
-		(direction.z > 0.0) ? 1 : -1
+		(ray.Direction.x > 0.0) ? 1 : -1,
+		(ray.Direction.y > 0.0) ? 1 : -1,
+		(ray.Direction.z > 0.0) ? 1 : -1
 	);
 			
 	float voxelSize	= model.VoxelSize;
-	vec3 delta		= voxelSize / direction * vec3(step);	
+	vec3 delta		= voxelSize / ray.Direction * vec3(step);	
 
-	RaymarchState state = CreateRaymarchState(ray, origin, direction, step, maxSteps, voxelSize, decompressedVoxelOffset);
+	RaymarchState state = CreateRaymarchState(ray, origin, step, maxSteps, voxelSize, decompressedVoxelOffset);
 	
 	while (state.MaxSteps.x >= 0 && state.MaxSteps.y >= 0 && state.MaxSteps.z >= 0) 
 	{	
@@ -403,12 +403,12 @@ RaymarchResult RayMarchSteps(in Ray ray, vec4 startColor, vec3 origin, vec3 dire
 }
 
 
-RaymarchResult RayMarch(in Ray ray, vec4 startColor, vec3 origin, vec3 direction, in VoxelModel model, float currentDistance, ivec3 decompressedVoxelOffset)
+RaymarchResult RayMarch(in Ray ray, vec4 startColor, vec3 origin, in VoxelModel model, float currentDistance, ivec3 decompressedVoxelOffset)
 {
-	return RayMarchSteps(ray, startColor, origin, direction, model, currentDistance, ivec3(model.Width, model.Height, model.Depth), decompressedVoxelOffset);
+	return RayMarchSteps(ray, startColor, origin, model, currentDistance, ivec3(model.Width, model.Height, model.Depth), decompressedVoxelOffset);
 }
 
-RaymarchResult RaymarchCompressed(in Ray ray, vec4 startColor, vec3 origin, vec3 direction, in VoxelModel model, float currentDistance)
+RaymarchResult RaymarchCompressed(in Ray ray, vec4 startColor, vec3 origin, in VoxelModel model, float currentDistance)
 {
 	RaymarchResult result;
 	result.Hit		= false;
@@ -416,13 +416,13 @@ RaymarchResult RaymarchCompressed(in Ray ray, vec4 startColor, vec3 origin, vec3
 	result.Distance = 0.0;
 	
 	ivec3 step = ivec3(
-		(direction.x > 0.0) ? 1 : -1,
-		(direction.y > 0.0) ? 1 : -1,
-		(direction.z > 0.0) ? 1 : -1
+		(ray.Direction.x > 0.0) ? 1 : -1,
+		(ray.Direction.y > 0.0) ? 1 : -1,
+		(ray.Direction.z > 0.0) ? 1 : -1
 	);
 	ivec3 maxSteps		= ivec3(model.Width, model.Height, model.Depth);
-	vec3 t_delta		= model.VoxelSize / direction * vec3(step);
-	RaymarchState state = CreateRaymarchState(ray, origin, direction, step, maxSteps, model.VoxelSize, ivec3(0,0,0));
+	vec3 t_delta		= model.VoxelSize / ray.Direction * vec3(step);
+	RaymarchState state = CreateRaymarchState(ray, origin, step, maxSteps, model.VoxelSize, ivec3(0,0,0));
 
 	while (state.MaxSteps.x >= 0 && state.MaxSteps.y >= 0 && state.MaxSteps.z >= 0)
 	{
@@ -446,7 +446,8 @@ RaymarchResult RaymarchCompressed(in Ray ray, vec4 startColor, vec3 origin, vec3
 						result.Normal = state.Normal;
 						result.Distance = state.Distance;
 						result.Hit = true;
-					}				
+					}	
+					// TODO: calculate number of steps it would take to traverse this cell and blend color multiple times
 					result.Color = BlendColors(result.Color, VoxelToColor(colorUINT));
 					if (result.Color.a >= 1.0)
 						break;	
@@ -456,7 +457,7 @@ RaymarchResult RaymarchCompressed(in Ray ray, vec4 startColor, vec3 origin, vec3
 			{
 				// Calculates real coordinates of CurrentVoxel in decompressed model
 				ivec3 decompressedVoxelOffset	= state.CurrentVoxel * int(model.CompressScale); // Required for proper distance calculation
-				vec3 newOrigin					= ray.Origin + direction * (state.Distance - EPSILON); // Move origin to hit of top grid cell
+				vec3 newOrigin					= ray.Origin + ray.Direction * (state.Distance - EPSILON); // Move origin to hit of top grid cell
 				vec3 voxelPosition				= VoxelPosition(state.CurrentVoxel, model.VoxelSize);
 				vec3 cellOrigin					= newOrigin - voxelPosition;
 			
@@ -468,7 +469,7 @@ RaymarchResult RaymarchCompressed(in Ray ray, vec4 startColor, vec3 origin, vec3
 				cellModel.VoxelSize		= model.VoxelSize / model.CompressScale;
 				
 				// Raymarch from new origin						
-				RaymarchResult newResult = RayMarch(ray, result.Color, cellOrigin, direction, cellModel, currentDistance, decompressedVoxelOffset);
+				RaymarchResult newResult = RayMarch(ray, result.Color, cellOrigin, cellModel, currentDistance, decompressedVoxelOffset);
 				if (newResult.Hit)
 				{
 					if (result.Hit == false)
@@ -546,20 +547,20 @@ bool DrawModel(in VoxelModel model)
 
 	vec4  startColor		= vec4(0,0,0,0);
 	float currentDistance	= imageLoad(o_DepthImage, textureIndex).r;
-	float newDistance		= 0.0;
+	float startDistance		= 0.0;
 
 	// Check if ray intersects with model and move origin of ray
-	if (!ResolveRayModelIntersection(origin, direction, model, newDistance))
+	if (!ResolveRayModelIntersection(origin, direction, model, startDistance))
 		return false;
 		 
 	RaymarchResult result;
 	if (model.Compressed)
 	{
-		result = RaymarchCompressed(ray, startColor, origin, direction, model, currentDistance);
+		result = RaymarchCompressed(ray, startColor, origin, model, currentDistance);
 	}
 	else
 	{
-		result = RayMarch(ray, startColor, origin, direction, model, currentDistance, ivec3(0,0,0));	
+		result = RayMarch(ray, startColor, origin, model, currentDistance, ivec3(0,0,0));	
 	}
 	if (result.Hit)		
 	{ 
