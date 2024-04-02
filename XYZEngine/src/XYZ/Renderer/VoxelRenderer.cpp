@@ -288,6 +288,10 @@ namespace XYZ {
 			{
 			}
 
+			if (ImGui::Checkbox("Ddebug Opaque", &m_DebugOpaque))
+			{
+			}
+
 			ImGui::Checkbox("SSGI", &m_UseSSGI);
 			ImGui::DragInt("SSGI Sample Count", (int*) & m_SSGIValues.SampleCount);
 			ImGui::DragFloat("SSGI Indirect Amount", &m_SSGIValues.IndirectAmount, 0.1f);
@@ -563,11 +567,23 @@ namespace XYZ {
 		};
 		for (const auto& model : m_RenderModels)
 		{
-			if (!model.Mesh->IsOpaque())
+			if (m_DebugOpaque)
 			{
-				m_DebugRenderer->RaymarchSubmesh(
-					model.SubmeshIndex, model.BoundingBox, model.Transform, model.Mesh, coords
-				);
+				if (model.Mesh->IsOpaque())
+				{
+					m_DebugRenderer->RaymarchSubmesh(
+						model.SubmeshIndex, model.BoundingBox, model.Transform, model.Mesh, coords
+					);
+				}
+			}
+			else 
+			{
+				if (!model.Mesh->IsOpaque())
+				{
+					m_DebugRenderer->RaymarchSubmesh(
+						model.SubmeshIndex, model.BoundingBox, model.Transform, model.Mesh, coords
+					);
+				}
 			}
 		}
 		m_DebugRenderer->EndScene(m_OutputTexture->GetImage());

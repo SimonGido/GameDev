@@ -307,6 +307,7 @@ namespace XYZ {
 		bool					m_ShowAABB = false;
 		bool					m_ShowPosition = false;
 		bool					m_ShowNormals = false;
+		bool					m_DebugOpaque = false;
 
 		std::vector<VoxelRenderModel*>					 m_RenderModelsSorted;
 		std::vector<VoxelRenderModel>					 m_RenderModels;

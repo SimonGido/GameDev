@@ -26,7 +26,7 @@ namespace XYZ {
 		uint32_t Width;
 		uint32_t Height;
 		uint32_t Depth;
-		uint32_t CompressScale;
+		uint32_t CompressScale = 1;
 		float	 VoxelSize = 1.0f;
 		bool	 Compressed = false;
 		

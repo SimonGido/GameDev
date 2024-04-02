@@ -208,14 +208,18 @@ namespace XYZ {
 		if (Utils::ResolveRayModelIntersection(resolvedRay.Origin, resolvedRay.Direction, dist, submesh))
 		{
 			submitRay(ray, dist, glm::vec4(1.0f));
-			submitRay(resolvedRay, 5.0f, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
-			float distanceTraveled = raymarchCompressed(ray, glm::vec4(0, 0, 0, 0), resolvedRay.Origin, submesh, FLT_MAX, mesh->GetColorPallete());
-		
+			float distanceTraveled = 0.0f;
+			if (submesh.CompressedCells.size() != 0)
+				distanceTraveled = raymarchCompressed(ray, glm::vec4(0, 0, 0, 0), resolvedRay.Origin, submesh, FLT_MAX, mesh->GetColorPallete());
+			else
+				distanceTraveled = rayMarchSteps(ray, glm::vec4(0, 0, 0, 0), resolvedRay.Origin, submesh.Width, submesh.Height, submesh.Depth, 0, submesh, FLT_MAX, { submesh.Width, submesh.Height, submesh.Depth }, { 0,0,0 }, mesh->GetColorPallete()).Distance;
+			
 			m_DebugLines.push_back({
 				ray.Origin,
 				ray.Origin + ray.Direction * distanceTraveled,
 				glm::vec4(1.0f, 0.0f, 1.0f, 1.0f)
 				});
+			//submitRay(resolvedRay, 3.0f, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
 		}	
 	}
 	void VoxelRendererDebug::SetViewportSize(uint32_t width, uint32_t height)
@@ -443,11 +447,11 @@ namespace XYZ {
 		state.Hit = false;
 		state.Color = glm::vec4(0, 0, 0, 0);
 
-		float voxelSize = model.VoxelSize * model.CompressScale;
+		float voxelSize = model.VoxelSize / model.CompressScale;
 
 		while (state.MaxSteps.x >= 0 && state.MaxSteps.y >= 0 && state.MaxSteps.z >= 0)
 		{
-			state.Distance = Utils::VoxelDistanceFromRay(ray.Origin, ray.Direction, state.CurrentVoxel + state.DecompressedVoxelOffset, model.VoxelSize);
+			state.Distance = Utils::VoxelDistanceFromRay(ray.Origin, ray.Direction, state.CurrentVoxel + state.DecompressedVoxelOffset, voxelSize);
 			if (state.Distance > currentDistance)
 				break;
 
@@ -480,7 +484,7 @@ namespace XYZ {
 			(ray.Direction.z > 0.0) ? 1 : -1
 		);
 
-		float voxelSize = model.VoxelSize;
+		float voxelSize = model.VoxelSize / model.CompressScale;
 		glm::vec3 delta = voxelSize / ray.Direction * glm::vec3(step);
 
 		Utils::RaymarchState state = Utils::CreateRaymarchState(ray, origin, step, maxSteps, voxelSize, decompressedVoxelOffset);
@@ -569,7 +573,7 @@ namespace XYZ {
 					uint32_t depth = model.CompressScale;
 					
 					// Raymarch from new origin						
-					Utils::RaymarchResult newResult = rayMarchSteps(ray, result.Color, cellOrigin, width, height, depth, voxelOffset, model, currentDistance, decompressedVoxelOffset, decompressedVoxelOffset, colorPallete);
+					Utils::RaymarchResult newResult = rayMarchSteps(ray, result.Color, cellOrigin, width, height, depth, voxelOffset, model, currentDistance, {width, height, depth}, decompressedVoxelOffset, colorPallete);
 					if (newResult.Hit)
 					{
 						submitVoxelCell(model, colorPallete, state.CurrentVoxel);
