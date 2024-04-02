@@ -437,7 +437,7 @@ namespace XYZ {
 		if (reset)
 			m_QuadBuffer.Reset();
 	}
-	void Renderer2D::FlushLines(const Ref<Pipeline>& pipeline, const Ref<MaterialInstance>& materialInstance, bool reset)
+	void Renderer2D::FlushLines(const Ref<Pipeline>& pipeline, const Ref<MaterialInstance>& materialInstance, bool reset, const PushConstBuffer& pushConst)
 	{
 		const uint32_t dataSize = m_LineBuffer.DataSize();
 		if (dataSize)
@@ -445,7 +445,7 @@ namespace XYZ {
 			XYZ_ASSERT(dataSize + m_LineBuffer.Offset < m_LineBuffer.VertexBuffer->GetSize(), "");
 			m_LineBuffer.VertexBuffer->Update(m_LineBuffer.DataPtr(), dataSize, m_LineBuffer.Offset);
 
-			Renderer::RenderGeometry(m_RenderCommandBuffer, pipeline, materialInstance, m_LineBuffer.VertexBuffer, m_LineBuffer.IndexBuffer, glm::mat4(1.0f), m_LineBuffer.IndexCount, m_LineBuffer.Offset);
+			Renderer::RenderGeometry(m_RenderCommandBuffer, pipeline, materialInstance, m_LineBuffer.VertexBuffer, m_LineBuffer.IndexBuffer, pushConst, m_LineBuffer.IndexCount, m_LineBuffer.Offset);
 
 			m_Stats.LineDrawCalls++;
 			m_LineBuffer.IndexCount = 0;

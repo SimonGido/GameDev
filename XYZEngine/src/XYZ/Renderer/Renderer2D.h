@@ -80,7 +80,7 @@ namespace XYZ {
 
 
 		void FlushQuads(const Ref<Pipeline>& pipeline, const Ref<MaterialInstance>& materialInstance, bool reset);
-		void FlushLines(const Ref<Pipeline>& pipeline, const Ref<MaterialInstance>& materialInstance, bool reset);
+		void FlushLines(const Ref<Pipeline>& pipeline, const Ref<MaterialInstance>& materialInstance, bool reset, const PushConstBuffer& pushConst = {glm::mat4(1.0f)});
 		void FlushFilledCircles(const Ref<Pipeline>& pipeline, const Ref<MaterialInstance>& materialInstance, bool reset);
 
 		void EndScene(bool reset = true);
@@ -88,6 +88,8 @@ namespace XYZ {
 		const Renderer2DStats&	  GetStats();
 
 		static constexpr uint32_t GetMaxTextures() { return sc_MaxTextures; }
+
+		static constexpr uint32_t GetMaxLines() { return sc_MaxLines; }
 	private:
 
 		struct QuadVertex
@@ -121,7 +123,7 @@ namespace XYZ {
 		static constexpr uint32_t sc_MaxQuads = 10000;
 		static constexpr uint32_t sc_MaxVertices = sc_MaxQuads * 4;
 		static constexpr uint32_t sc_MaxIndices = sc_MaxQuads * 6;
-		static constexpr uint32_t sc_MaxLines = 10000;
+		static constexpr uint32_t sc_MaxLines = 100000;
 		static constexpr uint32_t sc_MaxLineVertices = sc_MaxLines * 2;
 		static constexpr uint32_t sc_MaxLineIndices = sc_MaxLines * 2;
 		static constexpr uint32_t sc_MaxPoints = 10000;

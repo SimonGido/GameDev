@@ -284,6 +284,10 @@ namespace XYZ {
 			ImGui::DragFloat3("Light Color", glm::value_ptr(m_UBVoxelScene.DirectionalLight.Radiance), 0.1f);
 			ImGui::DragFloat("Light Multiplier", &m_UBVoxelScene.DirectionalLight.Multiplier, 0.1f);
 			
+			if (ImGui::Checkbox("Update Debug", &m_DebugRenderer->UpdateCamera))
+			{
+			}
+
 			ImGui::Checkbox("SSGI", &m_UseSSGI);
 			ImGui::DragInt("SSGI Sample Count", (int*) & m_SSGIValues.SampleCount);
 			ImGui::DragFloat("SSGI Indirect Amount", &m_SSGIValues.IndirectAmount, 0.1f);
@@ -553,7 +557,19 @@ namespace XYZ {
 			m_UBVoxelScene.InverseProjection,
 			m_UBVoxelScene.CameraPosition
 		);
-
+		glm::vec2 coords = {
+			m_ViewportSize.x / 2,
+			m_ViewportSize.y / 2
+		};
+		for (const auto& model : m_RenderModels)
+		{
+			if (!model.Mesh->IsOpaque())
+			{
+				m_DebugRenderer->RaymarchSubmesh(
+					model.SubmeshIndex, model.BoundingBox, model.Transform, model.Mesh, coords
+				);
+			}
+		}
 		m_DebugRenderer->EndScene(m_OutputTexture->GetImage());
 	}
 
