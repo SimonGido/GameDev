@@ -3,6 +3,7 @@
 #include "StorageBufferSet.h"
 #include "UniformBufferSet.h"
 #include "StorageBufferAllocator.h"
+#include "VoxelRendererDebug.h"
 #include "VoxelMesh.h"
 #include "Material.h"
 
@@ -235,6 +236,8 @@ namespace XYZ {
 		void effectPass();
 		void renderPass();
 		void ssgiPass();
+
+		void debugPass();
 		
 		void imageBarrier(Ref<PipelineCompute> pipeline, Ref<Image2D> image);
 
@@ -325,6 +328,8 @@ namespace XYZ {
 		GPUTimeQueries m_GPUTimeQueries;
 
 		Octree m_ModelsOctree;
+
+		std::unique_ptr<VoxelRendererDebug> m_DebugRenderer;
 	};
 
 }

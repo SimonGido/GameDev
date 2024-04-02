@@ -73,6 +73,8 @@ namespace XYZ {
 		m_UBVoxelScene.DirectionalLight.Radiance = glm::vec3(1.0f);
 		m_UBVoxelScene.DirectionalLight.Multiplier = 1.0f;
 		m_WorkGroups = { 32, 32 };
+
+		m_DebugRenderer = std::make_unique<VoxelRendererDebug>(m_CommandBuffer, m_UniformBufferSet);
 	}
 	void VoxelRenderer::BeginScene(const VoxelRendererCamera& camera)
 	{
@@ -109,6 +111,7 @@ namespace XYZ {
 		lightPass();
 		if (m_UseSSGI)
 			ssgiPass();
+		debugPass();
 
 		m_CommandBuffer->EndTimestampQuery(m_GPUTimeQueries.GPUTime);
 
@@ -124,6 +127,7 @@ namespace XYZ {
 			m_ViewportSize = glm::ivec2(width, height);
 			m_ViewportSizeChanged = true;
 		}
+		m_DebugRenderer->SetViewportSize(width, height);
 	}
 
 	void VoxelRenderer::SubmitMesh(const Ref<VoxelMesh>& mesh, const glm::mat4& transform)
@@ -156,6 +160,7 @@ namespace XYZ {
 
 	Ref<Image2D> VoxelRenderer::GetFinalPassImage() const
 	{
+		return m_DebugRenderer->GetFinalImage();
 		if (m_UseSSGI)
 			return m_SSGITexture->GetImage();
 		return m_OutputTexture->GetImage();
@@ -539,6 +544,17 @@ namespace XYZ {
 		);
 		
 		Renderer::EndPipelineCompute(m_SSGIPipeline);
+	}
+
+	void VoxelRenderer::debugPass()
+	{
+		m_DebugRenderer->BeginScene(
+			m_UBVoxelScene.InverseView,
+			m_UBVoxelScene.InverseProjection,
+			m_UBVoxelScene.CameraPosition
+		);
+
+		m_DebugRenderer->EndScene(m_OutputTexture->GetImage());
 	}
 
 	void VoxelRenderer::imageBarrier(Ref<PipelineCompute> pipeline, Ref<Image2D> image)
