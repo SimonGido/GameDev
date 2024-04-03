@@ -231,7 +231,7 @@ namespace XYZ {
 					submesh.ColorIndices[index] = 1; // Grass
 				}
 
-				for (uint32_t y = genHeight; y < 70; y++)
+				for (uint32_t y = genHeight; y < submesh.Height / 3; y++)
 				{
 					const uint32_t index = Index3D(x, y, z, submesh.Width, submesh.Height);
 					submesh.ColorIndices[index] = 2; // Water

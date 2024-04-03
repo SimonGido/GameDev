@@ -202,25 +202,6 @@ namespace XYZ {
 
 					m_RaymarchMaterial->SetImage("o_Image", m_OutputTexture->GetImage());
 					m_RaymarchMaterial->SetImage("o_DepthImage", m_DepthTexture->GetImage());
-					PipelineComputeSpecification spec;
-					spec.Shader = shader;
-
-					m_RaymarchPipeline = PipelineCompute::Create(spec);
-				}
-				else
-				{
-					XYZ_CORE_WARN("Failed to compile raymarch shader");
-				}
-			}
-			if (ImGui::Button("Reload Shader Test"))
-			{
-				Ref<Shader> shader = Shader::Create("Resources/Shaders/Voxel/TestRaymarchShader.glsl");
-				if (shader->IsCompiled())
-				{
-					m_RaymarchMaterial = Material::Create(shader);
-
-					m_RaymarchMaterial->SetImage("o_Image", m_OutputTexture->GetImage());
-					m_RaymarchMaterial->SetImage("o_DepthImage", m_DepthTexture->GetImage());
 					m_RaymarchMaterial->SetImage("o_Normal", m_NormalTexture->GetImage());
 					m_RaymarchMaterial->SetImage("o_Position", m_PositionTexture->GetImage());
 					PipelineComputeSpecification spec;
@@ -233,7 +214,7 @@ namespace XYZ {
 					XYZ_CORE_WARN("Failed to compile raymarch shader");
 				}
 			}
-
+			
 			if (ImGui::Button("Reload Shader Light"))
 			{
 				Ref<Shader> shader = Shader::Create("Resources/Shaders/Voxel/VoxelLightShader.glsl");
@@ -764,7 +745,7 @@ namespace XYZ {
 	
 	void VoxelRenderer::createDefaultPipelines()
 	{
-		Ref<Shader> shader = Shader::Create("Resources/Shaders/Voxel/TestRaymarchShader.glsl");
+		Ref<Shader> shader = Shader::Create("Resources/Shaders/Voxel/RaymarchShader.glsl");
 		m_RaymarchMaterial = Material::Create(shader);
 
 		m_RaymarchMaterial->SetImage("o_Image", m_OutputTexture->GetImage());
