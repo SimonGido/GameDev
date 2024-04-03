@@ -90,6 +90,19 @@ namespace XYZ {
 
 		void EditorCamera::OnUpdate(Timestep ts)
 		{
+			// TODO: temp
+			//m_Position.x = -411.423157;
+			//m_Position.y = 155.838928;
+			//m_Position.z = -273.030884;
+			//
+			//m_FocalPoint.x = -281.955872;
+			//m_FocalPoint.y = 62.3711586;
+			//m_FocalPoint.z = -203.440887;
+			//
+			//m_Distance = 174.186050;
+			//m_Pitch = 0.566399574;
+			//m_Yaw = 2.06399989;
+
 			if (Input::IsKeyPressed(KeyCode::KEY_LEFT_CONTROL))
 			{
 				const glm::vec2& mouse{ Input::GetMouseX(), Input::GetMouseY() };

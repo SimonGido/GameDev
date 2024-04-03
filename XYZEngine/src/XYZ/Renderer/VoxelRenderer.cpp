@@ -111,7 +111,7 @@ namespace XYZ {
 		lightPass();
 		if (m_UseSSGI)
 			ssgiPass();
-		debugPass();
+		//debugPass();
 
 		m_CommandBuffer->EndTimestampQuery(m_GPUTimeQueries.GPUTime);
 
@@ -160,7 +160,7 @@ namespace XYZ {
 
 	Ref<Image2D> VoxelRenderer::GetFinalPassImage() const
 	{
-		return m_DebugRenderer->GetFinalImage();
+		//return m_DebugRenderer->GetFinalImage();
 		if (m_UseSSGI)
 			return m_SSGITexture->GetImage();
 		return m_OutputTexture->GetImage();
@@ -288,7 +288,7 @@ namespace XYZ {
 			{
 			}
 
-			if (ImGui::Checkbox("Ddebug Opaque", &m_DebugOpaque))
+			if (ImGui::Checkbox("Debug Opaque", &m_DebugOpaque))
 			{
 			}
 

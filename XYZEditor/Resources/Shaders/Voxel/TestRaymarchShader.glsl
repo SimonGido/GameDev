@@ -339,13 +339,14 @@ void RayMarch(in Ray ray, inout RaymarchState state, vec3 delta, ivec3 step, in 
 	float voxelSize = model.VoxelSize;
 
 	while (state.MaxSteps.x >= 0 && state.MaxSteps.y >= 0 && state.MaxSteps.z >= 0)
-	{
-		state.Distance = VoxelDistanceFromRay(ray.Origin, ray.Direction, state.CurrentVoxel + state.DecompressedVoxelOffset, model.VoxelSize);
-		if (state.Distance > currentDistance)
-			break;
-
+	{		
 		if (IsValidVoxel(state.CurrentVoxel, width, height, depth))
 		{
+			state.Distance = VoxelDistanceFromRay(ray.Origin, ray.Direction, state.CurrentVoxel + state.DecompressedVoxelOffset, model.VoxelSize);
+			if (state.Distance > currentDistance)
+				break;
+
+
 			uint voxelIndex = Index3D(state.CurrentVoxel, width, height) + voxelOffset;
 			uint colorIndex = uint(Voxels[voxelIndex]);
 			uint voxel = ColorPallete[colorPalleteIndex][colorIndex];
@@ -379,11 +380,13 @@ RaymarchResult RayMarchSteps(in Ray ray, vec4 startColor, vec3 origin, in VoxelM
 	RaymarchState state = CreateRaymarchState(ray, origin, step, maxSteps, voxelSize, decompressedVoxelOffset);
 	
 	while (state.MaxSteps.x >= 0 && state.MaxSteps.y >= 0 && state.MaxSteps.z >= 0) 
-	{	
-		// if new depth is bigger than currentDepth it means there is something in front of us
-		if (state.Distance > currentDistance) 
-			break;	
-			
+	{				
+		if (IsValidVoxel(state.CurrentVoxel, model.Width, model.Height, model.Depth))
+		{
+			// if new depth is bigger than currentDepth it means there is something in front of us	
+			if (state.Distance > currentDistance) 
+				break;
+		}
 		RayMarch(ray, state, delta, step, model, currentDistance);
 		if (state.Hit)
 		{		
@@ -425,13 +428,14 @@ RaymarchResult RaymarchCompressed(in Ray ray, vec4 startColor, vec3 origin, in V
 	RaymarchState state = CreateRaymarchState(ray, origin, step, maxSteps, model.VoxelSize, ivec3(0,0,0));
 
 	while (state.MaxSteps.x >= 0 && state.MaxSteps.y >= 0 && state.MaxSteps.z >= 0)
-	{
-		state.Distance = VoxelDistanceFromRay(ray.Origin, ray.Direction, state.CurrentVoxel, model.VoxelSize);
-		if (state.Distance > currentDistance)
-			break;
-
+	{		
 		if (IsValidVoxel(state.CurrentVoxel, model.Width, model.Height, model.Depth))
 		{
+			state.Distance = VoxelDistanceFromRay(ray.Origin, ray.Direction, state.CurrentVoxel, model.VoxelSize);
+			if (state.Distance > currentDistance)
+				break;
+
+
 			uint cellIndex = Index3D(state.CurrentVoxel, model.Width, model.Height) + model.CellOffset;
 			VoxelCompressedCell cell = CompressedCells[cellIndex];
 			if (cell.VoxelCount == 1) // Compressed cell
@@ -517,6 +521,8 @@ void StoreHitResult(in RaymarchResult result)
 		vec4 backColor = imageLoad(o_Image, textureIndex);
 		result.Color = BlendColors(result.Color, backColor);
 	}
+
+
 	imageStore(o_Normal, textureIndex, vec4(result.WorldNormal, 1.0));
 	imageStore(o_Position, textureIndex, vec4(result.WorldHit, 1.0));
 	imageStore(o_DepthImage, textureIndex, vec4(result.Distance, 0,0,0)); // Store new depth
@@ -565,7 +571,7 @@ bool DrawModel(in VoxelModel model)
 	if (result.Hit)		
 	{ 
 		result.WorldHit = g_CameraRay.Origin + (g_CameraRay.Direction * result.Distance);
-		result.WorldNormal = mat3(model.InverseTransform) * result.Normal;
+		result.WorldNormal = mat3(model.InverseTransform) * -result.Normal;
 		StoreHitResult(result);			
 	}
 	return false;

@@ -284,11 +284,11 @@ namespace XYZ {
 
 							if (compressed)
 								m_VoxelRenderer->SubmitMesh(chunk.Mesh, glm::mat4(1.0f));
-							break;
+							//break;
 						}
-						break;
+						//break;
 					}
-					break;
+					//break;
 				}
 				
 				for (auto& transform : m_TreeTransforms)
