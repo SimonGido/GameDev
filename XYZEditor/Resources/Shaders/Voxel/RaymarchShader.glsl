@@ -465,13 +465,13 @@ RaymarchResult RaymarchCompressed(in Ray ray, vec4 startColor, float tMin, in Vo
 
 
 
-bool ResolveRayModelIntersection(in vec3 origin, vec3 direction, in VoxelModel model, out float dist)
+bool ResolveRayModelIntersection(in vec3 origin, vec3 direction, in VoxelModel model, out float tMin, out float tMax)
 {
 	AABB aabb = ModelAABB(model);
 	bool result = PointInBox(origin, aabb.Min, aabb.Max); 
-	dist = 0.0;
+	tMin = 0.0;
 	if (!result)
-		result = RayBoxIntersection(origin, direction, aabb.Min, aabb.Max, dist);
+		result = RayBoxIntersection(origin, direction, aabb.Min, aabb.Max, tMin, tMax);
 
 	return result;
 }
@@ -515,8 +515,9 @@ bool DrawModel(in Ray cameraRay, in VoxelModel model)
 	vec4  startColor		= vec4(0,0,0,0);
 	float currentDistance	= imageLoad(o_DepthImage, textureIndex).r;
 	float tMin				= 0.0;
+	float tMax				= 0.0;
 	// Check if ray intersects with model and move origin of ray
-	if (!ResolveRayModelIntersection(modelRay.Origin, modelRay.Direction, model, tMin))
+	if (!ResolveRayModelIntersection(modelRay.Origin, modelRay.Direction, model, tMin, tMax))
 		return false;
 
 	RaymarchResult result;
