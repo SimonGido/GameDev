@@ -5,7 +5,7 @@
 #include "XYZ/Utils/Math/Ray.h"
 
 namespace XYZ {
-	
+
 	namespace Utils {
 		struct RaymarchResult
 		{
@@ -22,6 +22,7 @@ namespace XYZ {
 			glm::ivec3 MaxSteps;
 			bool  Hit;
 			float Distance;
+			float TestDistance;
 			glm::ivec3 DecompressedVoxelOffset;
 		};
 	}
@@ -68,8 +69,8 @@ namespace XYZ {
 		void submitVoxelCell(const VoxelSubmesh& submesh, const std::array<VoxelColor, 256>& collorPallete, const glm::ivec3& cellCoord);
 
 		void rayMarch(const Ray& ray, Utils::RaymarchState& state, const glm::vec3& delta, const glm::ivec3& step, uint32_t width, uint32_t height, uint32_t depth, uint32_t voxelOffset, const VoxelSubmesh& model, float currentDistance, const std::array<VoxelColor, 256>& colorPallete);
-		Utils::RaymarchResult rayMarchSteps(const Ray& ray, const glm::vec4& startColor, const glm::vec3& origin, uint32_t width, uint32_t height, uint32_t depth, uint32_t voxelOffset, const VoxelSubmesh& model, float currentDistance, const glm::ivec3& maxSteps, const glm::ivec3& decompressedVoxelOffset, const std::array<VoxelColor, 256>& colorPallete);
-		float raymarchCompressed(const Ray& ray, const glm::vec4& startColor, const glm::vec3& origin, const VoxelSubmesh& model, float currentDistance, const std::array<VoxelColor, 256>& colorPallete);
+		Utils::RaymarchResult rayMarchSteps(const Ray& ray, const glm::vec4& startColor, float tMin, uint32_t width, uint32_t height, uint32_t depth, uint32_t voxelOffset, const VoxelSubmesh& model, float currentDistance, const glm::ivec3& maxSteps, const glm::ivec3& decompressedVoxelOffset, const std::array<VoxelColor, 256>& colorPallete);
+		float raymarchCompressed(const Ray& ray, const glm::vec4& startColor, float tMin, const VoxelSubmesh& model, float currentDistance, const std::array<VoxelColor, 256>& colorPallete);
 	private:
 		glm::ivec2 m_ViewportSize;
 		bool	   m_ViewportSizeChanged = false;

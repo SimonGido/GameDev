@@ -111,7 +111,8 @@ namespace XYZ {
 		lightPass();
 		if (m_UseSSGI)
 			ssgiPass();
-		//debugPass();
+		if (m_Debug)
+			debugPass();
 
 		m_CommandBuffer->EndTimestampQuery(m_GPUTimeQueries.GPUTime);
 
@@ -160,7 +161,8 @@ namespace XYZ {
 
 	Ref<Image2D> VoxelRenderer::GetFinalPassImage() const
 	{
-		//return m_DebugRenderer->GetFinalImage();
+		if (m_Debug)
+			return m_DebugRenderer->GetFinalImage();
 		if (m_UseSSGI)
 			return m_SSGITexture->GetImage();
 		return m_OutputTexture->GetImage();
@@ -265,12 +267,11 @@ namespace XYZ {
 			ImGui::DragFloat3("Light Color", glm::value_ptr(m_UBVoxelScene.DirectionalLight.Radiance), 0.1f);
 			ImGui::DragFloat("Light Multiplier", &m_UBVoxelScene.DirectionalLight.Multiplier, 0.1f);
 			
-			if (ImGui::Checkbox("Update Debug", &m_DebugRenderer->UpdateCamera))
+			ImGui::Checkbox("Debug", &m_Debug);
+			if (m_Debug)
 			{
-			}
-
-			if (ImGui::Checkbox("Debug Opaque", &m_DebugOpaque))
-			{
+				ImGui::Checkbox("Update Debug", &m_DebugRenderer->UpdateCamera);
+				ImGui::Checkbox("Debug Opaque", &m_DebugOpaque);
 			}
 
 			ImGui::Checkbox("SSGI", &m_UseSSGI);
@@ -284,7 +285,7 @@ namespace XYZ {
 			ImGui::Checkbox("Show Octree", &m_ShowOctree);
 			ImGui::Checkbox("Show AABB", &m_ShowAABB);
 
-			ImGui::Checkbox("Show Position", &m_ShowPosition);
+			ImGui::Checkbox("Show Depth", &m_ShowDepth);
 			ImGui::Checkbox("Show Normals", &m_ShowNormals);
 
 			ImGui::NewLine();
@@ -497,14 +498,14 @@ namespace XYZ {
 		Bool32 useOctree = m_UseOctree;
 		Bool32 showOctree = m_ShowOctree;
 		Bool32 showAABB = m_ShowAABB;
-		Bool32 showPosition = m_ShowPosition;
+		Bool32 showDepth = m_ShowDepth;
 		Bool32 showNormals = m_ShowNormals;
 
 		Renderer::DispatchCompute(
 			m_RaymarchPipeline,
 			nullptr,
 			m_WorkGroups.x, m_WorkGroups.y, 1,
-			PushConstBuffer{ useOctree, showOctree, showAABB, showPosition, showNormals }
+			PushConstBuffer{ useOctree, showOctree, showAABB, showDepth, showNormals }
 		);
 
 

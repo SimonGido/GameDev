@@ -305,8 +305,10 @@ namespace XYZ {
 		bool					m_UseOctree = false;
 		bool					m_ShowOctree = false;
 		bool					m_ShowAABB = false;
-		bool					m_ShowPosition = false;
+		bool					m_ShowDepth = false;
 		bool					m_ShowNormals = false;
+
+		bool					m_Debug = false;
 		bool					m_DebugOpaque = false;
 
 		std::vector<VoxelRenderModel*>					 m_RenderModelsSorted;
