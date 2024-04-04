@@ -9,8 +9,8 @@
 #define MAX_COLORS 1024
 #define MAX_MODELS 1024
 #define MULTI_COLOR 256
-#define MAX_DEPTH 16
 #define MAX_NODES 16384
+#define STACK_MAX 256
 
 
 const float EPSILON = 0.01;
@@ -18,9 +18,8 @@ const uint OPAQUE = 255;
 
 layout(push_constant) uniform Uniforms
 {
-	bool UseOctree;
-	bool ShowOctree;
-	bool ShowAABB;
+	bool UseBVH;
+	bool ShowBVH;
 
 	bool ShowDepth;
 	bool ShowNormals;
@@ -40,18 +39,15 @@ struct AABB
 };
 
 
-struct VoxelModelOctreeNode
+struct VoxelModelBVHNode
 {
 	vec4 Min;
 	vec4 Max;
 
-	int  Children[8];
-	
-	bool IsLeaf;
-	int  DataStart;
-	int  DataEnd;
-
-	uint Padding;
+	int Depth;
+	int Data;
+	int Left;
+	int Right;
 };
 
 
@@ -114,11 +110,11 @@ layout(std430, binding = 20) readonly buffer buffer_Compressed
 	VoxelCompressedCell CompressedCells[];
 };
 
-layout(std430, binding = 23) readonly buffer buffer_Octree
+layout(std430, binding = 23) readonly buffer buffer_BVH
 {		
 	uint NodeCount;
 	uint Padding[3];
-	VoxelModelOctreeNode Nodes[MAX_NODES];
+	VoxelModelBVHNode Nodes[MAX_NODES];
 	uint ModelIndices[MAX_MODELS];
 };
 
@@ -585,6 +581,63 @@ bool DrawModel(in Ray cameraRay, in VoxelModel model)
 	return false;
 }
 
+void RaycastBVH(in Ray cameraRay)
+{
+	if (NodeCount == 0)
+		return;
+
+	VoxelModelBVHNode root = Nodes[NodeCount - 1];
+
+	float tMin;
+	float tMax;
+	bool inside = PointInBox(cameraRay.Origin, root.Min.xyz, root.Max.xyz);
+
+	if (!RayBoxIntersection(cameraRay.Origin, cameraRay.Direction, root.Min.xyz, root.Max.xyz, tMin, tMax) && !inside)
+		return;
+
+	Ray inverseRay;
+	inverseRay.Origin = cameraRay.Origin + (cameraRay.Direction * tMax);
+	inverseRay.Direction = -cameraRay.Direction;
+
+	uint nodesHit[STACK_MAX];
+	uint stack[STACK_MAX];
+	uint stackIndex = 0;
+	stack[stackIndex++] = NodeCount - 1; // Start with the root node
+	
+	int hitCount = 0;
+	ivec2 textureIndex = ivec2(gl_GlobalInvocationID.xy);
+	while (stackIndex > 0)
+	{
+		stackIndex--;
+		uint nodeIndex = stack[stackIndex];
+		VoxelModelBVHNode node = Nodes[nodeIndex];
+
+		inside = PointInBox(inverseRay.Origin, node.Min.xyz, node.Max.xyz);
+		if (inside || RayBoxIntersection(inverseRay.Origin, inverseRay.Direction, node.Min.xyz, node.Max.xyz, tMin, tMax))
+		{		
+			if (node.Data != -1)
+			{
+				VoxelModel model = Models[node.Data];
+				DrawModel(cameraRay, model);
+			}
+
+			hitCount++;
+			if (u_Uniforms.ShowBVH)
+			{
+				vec3 gradient = GetGradient(hitCount) * 0.1;
+				vec4 origColor = imageLoad(o_Image, textureIndex);
+				origColor.rgb += gradient;
+				imageStore(o_Image, textureIndex, origColor);
+			}
+			if (node.Left != -1 && node.Right != -1)
+			{
+				stack[stackIndex++] = node.Left;
+				stack[stackIndex++] = node.Right;
+			}
+		}
+	}
+}
+
 
 bool ValidPixel(ivec2 index)
 {
@@ -600,9 +653,16 @@ void main()
 
 	Ray cameraRay = CreateRay(u_CameraPosition.xyz, textureIndex);
 
-	for (uint i = 0; i < NumModels; i++)
+	if (u_Uniforms.UseBVH)
 	{
-		VoxelModel model = Models[i];
-		DrawModel(cameraRay, model);
+		RaycastBVH(cameraRay);
+	}
+	else
+	{
+		for (uint i = 0; i < NumModels; i++)
+		{
+			VoxelModel model = Models[i];
+			DrawModel(cameraRay, model);
+		}
 	}
 }

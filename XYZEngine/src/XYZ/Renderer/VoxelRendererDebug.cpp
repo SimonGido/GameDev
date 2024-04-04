@@ -253,6 +253,25 @@ namespace XYZ {
 			//submitRay(resolvedRay, 3.0f, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
 		}
 	}
+	void VoxelRendererDebug::ShowBVH(const BVH& bvh, int32_t depth)
+	{
+		m_Transform = glm::mat4(1.0f);
+		int counter = 0;
+		for (const auto& node : bvh.GetNodes())
+		{
+			if (depth == -1)
+			{
+				submitAABB(node.AABB.Min, node.AABB.Max, c_BoundingBoxColor);
+				counter++;
+			}
+			else if (node.Depth == depth)
+			{
+				submitAABB(node.AABB.Min, node.AABB.Max, c_BoundingBoxColor);
+				counter++;
+			}
+		}
+		std::cout << counter << std::endl;
+	}
 	void VoxelRendererDebug::SetViewportSize(uint32_t width, uint32_t height)
 	{
 		if (m_ViewportSize.x != width || m_ViewportSize.y != height)

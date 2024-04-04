@@ -8,23 +8,20 @@
 #include "Material.h"
 
 #include "XYZ/Scene/Scene.h"
-#include "XYZ/Utils/DataStructures/Octree.h"
+#include "XYZ/Utils/DataStructures/BVH.h"
 #include "XYZ/Asset/Renderer/VoxelMeshSource.h"
 
 namespace XYZ {
 
-	struct VoxelModelOctreeNode
+	struct VoxelModelBVHNode
 	{
 		glm::vec4 Min;
 		glm::vec4 Max;
 
-		int32_t Children[8]{ -1 };
-
-		Bool32	IsLeaf;
-		int32_t DataStart;
-		int32_t DataEnd;
-
-		Padding<4> Padding;
+		int32_t Depth = 0;
+		int32_t Data = BVHNode::Invalid;
+		int32_t Left = BVHNode::Invalid;
+		int32_t Right = BVHNode::Invalid;
 	};
 
 
@@ -122,7 +119,7 @@ namespace XYZ {
 		static constexpr uint32_t Set = 0;
 	};
 
-	struct SSBOOCtree
+	struct SSBOBVH
 	{
 		static constexpr uint32_t MaxNodes = 16384;
 
@@ -132,7 +129,7 @@ namespace XYZ {
 
 		uint32_t			 NodeCount;
 		Padding<12>			 Padding;
-		VoxelModelOctreeNode Nodes[MaxNodes];
+		VoxelModelBVHNode	 Nodes[MaxNodes];
 		uint32_t			 ModelIndices[SSBOVoxelModels::MaxModels];
 	};
 
@@ -248,7 +245,7 @@ namespace XYZ {
 		
 
 		void updateVoxelModelsSSBO();
-		void updateOctreeSSBO();
+		void updateBVHSSBO();
 
 		void createDefaultPipelines();
 		Ref<PipelineCompute> getEffectPipeline(const Ref<MaterialAsset>& material);
@@ -292,7 +289,7 @@ namespace XYZ {
 
 		UBVoxelScene			m_UBVoxelScene;
 		SSBOVoxelModels			m_SSBOVoxelModels;
-		SSBOOCtree				m_SSBOOctree;
+		SSBOBVH					m_SSBOBVH;
 
 		SSGIValues				m_SSGIValues;
 		glm::ivec2				m_ViewportSize;
@@ -302,14 +299,15 @@ namespace XYZ {
 		Statistics				m_Statistics;
 	
 		bool					m_UseSSGI = false;
-		bool					m_UseOctree = false;
-		bool					m_ShowOctree = false;
-		bool					m_ShowAABB = false;
+		bool					m_UseBVH = false;
+		bool					m_ShowBVH = false;
 		bool					m_ShowDepth = false;
 		bool					m_ShowNormals = false;
 
 		bool					m_Debug = false;
 		bool					m_DebugOpaque = false;
+
+		int32_t					m_ShowBVHDepth = -1;
 
 		std::vector<VoxelRenderModel*>					 m_RenderModelsSorted;
 		std::vector<VoxelRenderModel>					 m_RenderModels;
@@ -330,7 +328,7 @@ namespace XYZ {
 		};
 		GPUTimeQueries m_GPUTimeQueries;
 
-		Octree m_ModelsOctree;
+		BVH m_ModelsBVH;
 
 		std::unique_ptr<VoxelRendererDebug> m_DebugRenderer;
 	};

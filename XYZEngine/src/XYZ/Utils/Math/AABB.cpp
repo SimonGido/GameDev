@@ -19,6 +19,12 @@ namespace XYZ {
 		return 2.0f * (diff.x * diff.y * diff.z + diff.z * diff.x);
 	}
 
+	float AABB::CalculateVolume() const
+	{
+		float volume = (Max.x - Min.x) * (Max.y - Min.y) * (Max.z - Min.z);
+		return volume;
+	}
+
 	float AABB::GetPerimeter() const
 	{
 		const float wx = Max.x - Min.x;
@@ -106,6 +112,11 @@ namespace XYZ {
 			&& IsOnPlane(frustum.BottomFace);
 	}
 
+	void AABB::Union(const AABB& aabb)
+	{
+		*this = AABB::Union(*this, aabb);
+	}
+
 
 	glm::vec3 AABB::GetCenter() const
 	{
@@ -171,9 +182,11 @@ namespace XYZ {
 		AABB c;
 		c.Min.x = std::min(a.Min.x, b.Min.x);
 		c.Min.y = std::min(a.Min.y, b.Min.y);
+		c.Min.z = std::min(a.Min.z, b.Min.z);
 
 		c.Max.x = std::max(a.Max.x, b.Max.x);
 		c.Max.y = std::max(a.Max.y, b.Max.y);
+		c.Max.z = std::max(a.Max.z, b.Max.z);
 		return c;
 	}
 

@@ -16,12 +16,16 @@ namespace XYZ {
 			
 		float GetPerimeter() const;
 		float CalculateArea() const;
+		float CalculateVolume() const;
+
 		bool Contains(const AABB& aabb) const;
 		bool Intersect(const AABB& aabb) const;
 
 		bool InsideFrustum(const glm::mat4& mvp) const;
 		bool IsOnPlane(const Math::Plane& plane) const;
 		bool InsideFrustum(const Math::Frustum& frustum) const;
+
+		void Union(const AABB& aabb);
 
 		glm::vec3 GetCenter() const;
 
