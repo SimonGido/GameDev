@@ -599,7 +599,6 @@ void RaycastBVH(in Ray cameraRay)
 	inverseRay.Origin = cameraRay.Origin + (cameraRay.Direction * tMax);
 	inverseRay.Direction = -cameraRay.Direction;
 
-	uint nodesHit[STACK_MAX];
 	uint stack[STACK_MAX];
 	uint stackIndex = 0;
 	stack[stackIndex++] = NodeCount - 1; // Start with the root node
