@@ -620,9 +620,9 @@ void RaycastBVH(in Ray cameraRay)
 				DrawModel(cameraRay, model);
 			}
 
-			hitCount++;
 			if (u_Uniforms.ShowBVH)
 			{
+				hitCount++;
 				vec3 gradient = GetGradient(hitCount) * 0.1;
 				vec4 origColor = imageLoad(o_Image, textureIndex);
 				origColor.rgb += gradient;
