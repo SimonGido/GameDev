@@ -611,8 +611,7 @@ void RaycastBVH(in Ray cameraRay)
 		uint nodeIndex = stack[stackIndex];
 		VoxelModelBVHNode node = Nodes[nodeIndex];
 
-		inside = PointInBox(inverseRay.Origin, node.Min.xyz, node.Max.xyz);
-		if (inside || RayBoxIntersection(inverseRay.Origin, inverseRay.Direction, node.Min.xyz, node.Max.xyz, tMin, tMax))
+		if (RayAABBOverlap(inverseRay.Origin, inverseRay.Direction, node.Min.xyz, node.Max.xyz))
 		{		
 			if (node.Data != -1)
 			{
