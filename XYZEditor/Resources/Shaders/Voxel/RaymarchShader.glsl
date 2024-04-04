@@ -136,7 +136,13 @@ float DistToDepth(float dist)
 {
     return (dist - NearClip) / (FarClip - NearClip);
 }
-
+AABB VoxelAABB(ivec3 voxel, float voxelSize)
+{
+	AABB result;
+	result.Min = vec3(voxel.x * voxelSize, voxel.y * voxelSize, voxel.z * voxelSize);
+	result.Max = result.Min + voxelSize;
+	return result;
+}
 
 AABB ModelAABB(in VoxelModel model)
 {
@@ -213,7 +219,14 @@ vec4 BlendColors(vec4 colorA, vec4 colorB)
 	return colorA + colorB * colorB.a * (1.0 - colorA.a);
 }
 
+vec4 BlendColorsNTimes(vec4 colorA, vec4 colorB, int N)
+{
+    // Calculate the new alpha value for colorB
+    float newAlpha = 1.0 - pow(1.0 - colorB.a, float(N));
 
+    // Blend colorA with colorB using the new alpha value
+    return colorA + colorB * newAlpha * (1.0 - colorA.a);
+}
 
 struct RaymarchResult
 {
@@ -253,6 +266,34 @@ vec3 GetNormalFromState(in RaymarchState state, ivec3 step)
 	{
 		return vec3(0.0, 0.0, float(-step.z));
 	}	
+}
+
+int CalculateNumberOfSteps(in Ray ray, float tMin, float tMax, float voxelSize)
+{
+	vec3 rayStart		= ray.Origin + ray.Direction * (tMin - EPSILON);
+	vec3 rayEnd			= ray.Origin + ray.Direction * (tMax - EPSILON);
+	ivec3 startVoxel	= ivec3(floor(rayStart / voxelSize));
+	ivec3 endVoxel		= ivec3(floor(rayEnd / voxelSize));
+
+	ivec3 diff = abs(endVoxel - startVoxel);
+	return diff.x + diff.y + diff.z;
+}
+
+float GetNextDistance(in RaymarchState state, ivec3 step, vec3 delta)
+{
+	if (state.Max.x < state.Max.y && state.Max.x < state.Max.z)
+	{
+		return state.Max.x;
+	}
+	else if (state.Max.y < state.Max.z)
+	{
+		return state.Max.y;
+
+	}
+	else
+	{
+		return state.Max.z;
+	}
 }
 
 void PerformStep(inout RaymarchState state, ivec3 step, vec3 delta)
@@ -425,11 +466,17 @@ RaymarchResult RaymarchCompressed(in Ray ray, vec4 startColor, float tMin, in Vo
 						result.Distance = state.Distance;
 						result.Hit = true;
 					}	
-					// TODO: calculate number of steps it would take to traverse this cell and blend color multiple times
+
+					float tMin = state.Distance;
+					float tMax = GetNextDistance(state, step, t_delta);
+					int numSteps = CalculateNumberOfSteps(ray, tMin, tMax, model.VoxelSize / model.CompressScale);
 					vec4 cellColor = VoxelToColor(colorUINT);
-					result.Color = BlendColors(result.Color, cellColor);
-					if (result.Color.a >= 1.0)
-						break;	
+					for (int i = 0; i < numSteps; i++)
+					{
+						result.Color = BlendColors(result.Color, cellColor);
+						if (result.Color.a >= 1.0)
+							return result;	
+					}
 				}					
 			}
 			else
@@ -454,7 +501,7 @@ RaymarchResult RaymarchCompressed(in Ray ray, vec4 startColor, float tMin, in Vo
 					}
 					result.Color = newResult.Color;
 					if (result.Color.a >= 1.0)
-						break;	
+						return result;	
 				}
 			}		
 		}

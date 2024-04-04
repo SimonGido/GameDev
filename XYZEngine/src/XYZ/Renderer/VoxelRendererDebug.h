@@ -22,7 +22,6 @@ namespace XYZ {
 			glm::ivec3 MaxSteps;
 			bool  Hit;
 			float Distance;
-			float TestDistance;
 			glm::ivec3 DecompressedVoxelOffset;
 		};
 	}

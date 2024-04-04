@@ -10,7 +10,16 @@ namespace XYZ {
 
 		static const float EPSILON = 0.01f;
 
+		static int CalculateNumberOfSteps(const Ray& ray, float tMin, float tMax, float voxelSize)
+		{
+			glm::vec3 rayStart = ray.Origin + ray.Direction * (tMin - EPSILON);
+			glm::vec3 rayEnd = ray.Origin + ray.Direction * (tMax - EPSILON);
+			glm::ivec3 startVoxel = glm::ivec3(floor(rayStart / voxelSize));
+			glm::ivec3 endVoxel = glm::ivec3(floor(rayEnd / voxelSize));
 
+			glm::ivec3 diff = abs(endVoxel - startVoxel);
+			return diff.x + diff.y + diff.z;
+		}
 		static uint32_t Index3D(uint32_t x, uint32_t y, uint32_t z, uint32_t width, uint32_t height)
 		{
 			return x + width * (y + height * z);
@@ -86,7 +95,6 @@ namespace XYZ {
 			const glm::ivec3 decompressedCurrentVoxel = glm::ivec3(floor(rayStart / voxelSize));
 
 			state.Distance = tMin;
-			state.TestDistance = tMin;
 			state.CurrentVoxel = decompressedCurrentVoxel - decompressedVoxelOffset;
 			state.MaxSteps = maxSteps;
 			state.DecompressedVoxelOffset = decompressedVoxelOffset;
@@ -104,27 +112,43 @@ namespace XYZ {
 		{
 			if (state.Max.x < state.Max.y && state.Max.x < state.Max.z)
 			{
-				state.TestDistance = state.Max.x;
+				state.Distance = state.Max.x;
 				state.Max.x += delta.x;
 				state.CurrentVoxel.x += step.x;
 				state.MaxSteps.x--;
 			}
 			else if (state.Max.y < state.Max.z)
 			{
-				state.TestDistance = state.Max.y;
+				state.Distance = state.Max.y;
 				state.Max.y += delta.y;
 				state.CurrentVoxel.y += step.y;
 				state.MaxSteps.y--;
 			}
 			else
 			{
-				state.TestDistance = state.Max.z;
+				state.Distance = state.Max.z;
 				state.Max.z += delta.z;
 				state.CurrentVoxel.z += step.z;
 				state.MaxSteps.z--;
 			}
 		}
 
+		static float GetNextDistance(const RaymarchState& state, const glm::ivec3& step, const glm::vec3& delta)
+		{
+			if (state.Max.x < state.Max.y && state.Max.x < state.Max.z)
+			{
+				return state.Max.x;
+			}
+			else if (state.Max.y < state.Max.z)
+			{
+				return state.Max.y;
+
+			}
+			else
+			{
+				return state.Max.z;
+			}
+		}
 
 		static Ray CreateRay(
 			const glm::vec3& origin,
@@ -540,7 +564,6 @@ namespace XYZ {
 		{
 			if (Utils::IsValidVoxel(state.CurrentVoxel, model.Width, model.Height, model.Depth))
 			{
-				state.Distance = Utils::VoxelDistanceFromRay(ray.Origin, ray.Direction, state.CurrentVoxel, model.VoxelSize);
 				if (state.Distance > currentDistance)
 					break;
 
@@ -557,6 +580,12 @@ namespace XYZ {
 							result.Distance = state.Distance;
 							result.Hit = true;
 						}
+
+						float tMin = state.Distance;
+						float tMax = Utils::GetNextDistance(state, step, t_delta);
+
+						int numSteps = Utils::CalculateNumberOfSteps(ray, tMin, tMax, model.VoxelSize / model.CompressScale);
+
 						// TODO: calculate number of steps it would take to traverse this cell and blend color multiple times
 						VoxelColor colorUINT = colorPallete[colorIndex];
 						result.Color = Utils::BlendColors(result.Color, Utils::VoxelToColor(colorUINT));
