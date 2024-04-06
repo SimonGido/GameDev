@@ -11,58 +11,95 @@ namespace XYZ {
 		return x + width * (y + height * z);
 	}
 
-	AABBGrid::AABBGrid(uint32_t width, uint32_t height, uint32_t depth, float cellSize)
-		:
-		m_Width(width),
-		m_Height(height),
-		m_Depth(depth),
-		m_HalfWidth(width / 2),
-		m_HalfHeight(height / 2),
-		m_HalfDepth(depth / 2),
-		m_CellSize(cellSize),
-		m_DataCount(0)
+	void AABBGrid::Initialize(const glm::vec3& position, uint32_t width, uint32_t height, uint32_t depth, float cellSize)
 	{
-		XYZ_ASSERT(m_Width % 2 == 0, "");
-		XYZ_ASSERT(m_Height % 2 == 0, "");
-		XYZ_ASSERT(m_Depth % 2 == 0, "");
+		m_Position = position;
+		m_Width = width;
+		m_Height = height;
+		m_Depth = depth;
+		m_CellSize = cellSize;
 
-		m_Cells.resize(m_Width * m_Height * m_Depth);
-	}
-	AABBGrid::AABBGrid(const AABB& aabb, float cellSize)
-		:
-		m_CellSize(cellSize),
-		m_DataCount(0)
-	{
-		m_Width			= std::max(Math::RoundUp((aabb.Max.x - aabb.Min.x) / cellSize, 2), 2);
-		m_Height		= std::max(Math::RoundUp((aabb.Max.y - aabb.Min.y) / cellSize, 2), 2);
-		m_Depth			= std::max(Math::RoundUp((aabb.Max.z - aabb.Min.z) / cellSize, 2), 2);
-
-		m_HalfWidth		= m_Width / 2;
-		m_HalfHeight	= m_Height / 2;
-		m_HalfDepth		= m_Depth / 2;
-		m_Cells.resize(m_Width * m_Height * m_Depth);
+		m_Cells.clear();
+		m_Cells.resize(width * height * depth);
 	}
 	void AABBGrid::Insert(const AABB& aabb, int32_t data)
 	{
-		const int32_t startX = aabb.Min.x / m_CellSize;
-		const int32_t startY = aabb.Min.y / m_CellSize;
-		const int32_t startZ = aabb.Min.z / m_CellSize;
+		const glm::vec3 localMin = aabb.Min - m_Position;
+		const glm::vec3 localMax = aabb.Max - m_Position;
 
-		const int32_t endX = aabb.Max.x / m_CellSize;
-		const int32_t endY = aabb.Max.y / m_CellSize;
-		const int32_t endZ = aabb.Max.z / m_CellSize;
+		const int32_t startX = std::floor(localMin.x / m_CellSize);
+		const int32_t startY = std::floor(localMin.y / m_CellSize);
+		const int32_t startZ = std::floor(localMin.z / m_CellSize);
 
-		for (int32_t x = startX + m_HalfWidth; x <= endX + m_HalfWidth; ++x)
+		const int32_t endX = std::ceil(localMax.x / m_CellSize);
+		const int32_t endY = std::ceil(localMax.y / m_CellSize);
+		const int32_t endZ = std::ceil(localMax.z / m_CellSize);
+
+		for (int32_t x = startX; x < endX; ++x)
 		{
-			for (int32_t y = startY + m_HalfHeight; y <= endY + m_HalfHeight; ++y)
+			if (x < 0 || x >= m_Width)
+				continue;
+
+			for (int32_t y = startY; y < endY; ++y)
 			{
-				for (int32_t z = startZ + m_HalfDepth; z <= endZ + m_HalfDepth; ++z)
+				if (y < 0 || y >= m_Height)
+					continue;
+
+				for (int32_t z = startZ; z < endZ; ++z)
 				{
+					if (z < 0 || z >= m_Depth)
+						continue;
+
 					const uint32_t index = Index3D(x, y, z, m_Width, m_Height);
-					if (index < m_Cells.size())
+					m_Cells[index].push_back(data);
+				}
+			}
+		}
+	}
+	void AABBGrid::Insert(const AABB& aabb, int32_t data, const Math::Frustum& frustum)
+	{
+		const glm::vec3 localMin = aabb.Min - m_Position;
+		const glm::vec3 localMax = aabb.Max - m_Position;
+
+		const int32_t startX = std::floor(localMin.x / m_CellSize);
+		const int32_t startY = std::floor(localMin.y / m_CellSize);
+		const int32_t startZ = std::floor(localMin.z / m_CellSize);
+
+		const int32_t endX = std::ceil(localMax.x / m_CellSize);
+		const int32_t endY = std::ceil(localMax.y / m_CellSize);
+		const int32_t endZ = std::ceil(localMax.z / m_CellSize);
+
+		for (int32_t x = startX; x < endX; ++x)
+		{
+			if (x < 0 || x >= m_Width)
+				continue;
+
+			for (int32_t y = startY; y < endY; ++y)
+			{
+				if (y < 0 || y >= m_Height)
+					continue;
+
+				for (int32_t z = startZ; z < endZ; ++z)
+				{
+					if (z < 0 || z >= m_Depth)
+						continue;
+
+					AABB cellAABB;
+					cellAABB.Min = glm::vec3(
+						m_Position.x + x * m_CellSize,
+						m_Position.y + y * m_CellSize,
+						m_Position.z + z * m_CellSize
+					);
+					cellAABB.Max = glm::vec3(
+						cellAABB.Min.x + m_CellSize,
+						cellAABB.Min.y + m_CellSize,
+						cellAABB.Min.z + m_CellSize
+					);
+					if (cellAABB.InsideFrustum(frustum))
 					{
-						m_Cells[index].Data.push_back(data);
-						m_DataCount++;
+						const uint32_t index = Index3D(x, y, z, m_Width, m_Height);
+						m_Cells[index].push_back(data);
+						return;
 					}
 				}
 			}

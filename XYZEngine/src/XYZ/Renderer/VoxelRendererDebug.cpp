@@ -217,6 +217,7 @@ namespace XYZ {
 			m_InverseProjection = inverseProjection;
 			m_CameraPosition = cameraPosition;
 		}
+		m_Transform = glm::mat4(1.0f);
 		m_DebugLines.clear();
 		updateViewportsize();
 	}
@@ -255,7 +256,7 @@ namespace XYZ {
 	}
 	void VoxelRendererDebug::ShowBVH(const BVH& bvh, int32_t depth)
 	{
-		m_Transform = glm::mat4(1.0f);
+		
 		for (const auto& node : bvh.GetNodes())
 		{
 			if (depth == -1)
@@ -268,6 +269,35 @@ namespace XYZ {
 			}
 		}
 	}
+	void VoxelRendererDebug::ShowAABBGrid(const AABBGrid& grid)
+	{
+		const glm::vec3& pos = grid.GetPosition();
+		const glm::ivec3 dim = grid.GetDimensions();
+		const float cellSize = grid.GetCellSize();
+
+		for (int32_t x = 0; x < dim.x; x++)
+		{
+			for (int32_t y = 0; y < dim.y; y++)
+			{
+				for (int32_t z = 0; z < dim.z; z++)
+				{
+					const uint32_t cellIndex = Utils::Index3D(x, y, z, dim.x, dim.y);
+					const auto& cell = grid.GetCells()[cellIndex];
+
+					AABB cellAABB;
+					cellAABB.Min.x = pos.x + x * cellSize;
+					cellAABB.Min.y = pos.y + y * cellSize;
+					cellAABB.Min.z = pos.z + z * cellSize;
+
+					cellAABB.Max.x = cellAABB.Min.x + cellSize;
+					cellAABB.Max.y = cellAABB.Min.y + cellSize;
+					cellAABB.Max.z = cellAABB.Min.z + cellSize;
+					submitAABB(cellAABB.Min, cellAABB.Max, c_BoundingBoxColor);
+				}
+			}
+		}
+	}
+
 	void VoxelRendererDebug::SetViewportSize(uint32_t width, uint32_t height)
 	{
 		if (m_ViewportSize.x != width || m_ViewportSize.y != height)

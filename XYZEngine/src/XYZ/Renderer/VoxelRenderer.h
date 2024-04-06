@@ -9,6 +9,7 @@
 
 #include "XYZ/Scene/Scene.h"
 #include "XYZ/Utils/DataStructures/BVH.h"
+#include "XYZ/Utils/DataStructures/AABBGrid.h"
 #include "XYZ/Asset/Renderer/VoxelMeshSource.h"
 
 namespace XYZ {
@@ -130,6 +131,27 @@ namespace XYZ {
 		uint32_t			 NodeCount;
 		Padding<12>			 Padding;
 		VoxelModelBVHNode	 Nodes[MaxNodes];
+	};
+
+	struct SSBOGridCell
+	{
+		uint32_t ModelOffset = 0;
+		uint32_t ModelCount = 0;
+	};
+
+	struct SSBOModelGrid
+	{
+		static constexpr glm::ivec3 MaxDimensions = { 5,5,5 };
+
+		static constexpr uint32_t Binding = 26;
+		static constexpr uint32_t Set = 0;
+
+		glm::ivec3			 Dimensions = MaxDimensions;
+		float				 CellSize;
+		
+		glm::mat4			 InverseTransform;
+
+		SSBOGridCell		 Cells[MaxDimensions.x * MaxDimensions.y * MaxDimensions.z];
 		uint32_t			 ModelIndices[SSBOVoxelModels::MaxModels];
 	};
 
@@ -246,6 +268,7 @@ namespace XYZ {
 
 		void updateVoxelModelsSSBO();
 		void updateBVHSSBO();
+		void updateModelGridSSBO();
 
 		void createDefaultPipelines();
 		Ref<PipelineCompute> getEffectPipeline(const Ref<MaterialAsset>& material);
@@ -290,6 +313,7 @@ namespace XYZ {
 		UBVoxelScene			m_UBVoxelScene;
 		SSBOVoxelModels			m_SSBOVoxelModels;
 		SSBOBVH					m_SSBOBVH;
+		SSBOModelGrid			m_SSBOModelGrid;
 
 		SSGIValues				m_SSGIValues;
 		glm::ivec2				m_ViewportSize;
@@ -297,9 +321,11 @@ namespace XYZ {
 		bool				    m_ViewportSizeChanged = false;
 
 		Statistics				m_Statistics;
+		Math::Frustum			m_Frustum;
 	
 		bool					m_UseSSGI = false;
 		bool					m_UseBVH = false;
+		bool					m_UseAABBGrid = false;
 		bool					m_ShowBVH = false;
 		bool					m_ShowDepth = false;
 		bool					m_ShowNormals = false;
@@ -329,6 +355,7 @@ namespace XYZ {
 		GPUTimeQueries m_GPUTimeQueries;
 
 		BVH m_ModelsBVH;
+		AABBGrid m_ModelsGrid;
 
 		std::unique_ptr<VoxelRendererDebug> m_DebugRenderer;
 	};

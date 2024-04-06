@@ -123,6 +123,11 @@ namespace XYZ {
 		return Min + (Max - Min) / 2.0f;
 	}
 
+	glm::vec3 AABB::GetSize() const
+	{
+		return Max - Min;
+	}
+
 	glm::vec3 AABB::ClosestPoint(const glm::vec3& startPoint) const
 	{
 		glm::vec3 closestPoint;

@@ -50,6 +50,7 @@ namespace XYZ {
 		m_StorageBufferSet->Create(sizeof(SSBOVoxelCompressed), SSBOVoxelCompressed::Set, SSBOVoxelCompressed::Binding, false, true);
 		m_StorageBufferSet->Create(SSBOVoxelComputeData::MaxSize, SSBOVoxelComputeData::Set, SSBOVoxelComputeData::Binding, false, true);
 		m_StorageBufferSet->Create(sizeof(SSBOBVH), SSBOBVH::Set, SSBOBVH::Binding);
+		m_StorageBufferSet->Create(sizeof(SSBOModelGrid), SSBOModelGrid::Set, SSBOModelGrid::Binding);
 
 		m_VoxelStorageAllocator = Ref<StorageBufferAllocator>::Create(SSBOVoxels::MaxVoxels, SSBOVoxels::Binding, SSBOVoxels::Set);
 		m_ColorStorageAllocator = Ref<StorageBufferAllocator>::Create(SSBOColors::MaxSize, SSBOColors::Binding, SSBOColors::Set);
@@ -76,6 +77,7 @@ namespace XYZ {
 	}
 	void VoxelRenderer::BeginScene(const VoxelRendererCamera& camera)
 	{
+		m_Frustum = camera.Frustum;
 		m_UBVoxelScene.InverseProjection = glm::inverse(camera.Projection);
 		m_UBVoxelScene.InverseView = glm::inverse(camera.ViewMatrix);
 		m_UBVoxelScene.CameraPosition = glm::vec4(camera.CameraPosition, 1.0f);
@@ -280,6 +282,7 @@ namespace XYZ {
 			ImGui::Checkbox("SSGI Noise", (bool*)&m_SSGIValues.Noise);
 			ImGui::NewLine();
 
+			ImGui::Checkbox("AABB Grid", &m_UseAABBGrid);
 			ImGui::Checkbox("BVH", &m_UseBVH);
 			ImGui::Checkbox("Show BVH", &m_ShowBVH);
 
@@ -332,7 +335,6 @@ namespace XYZ {
 		XYZ_PROFILE_FUNC("VoxelRenderer::updateBVHSSBO");
 		// Update octree
 		uint32_t nodeCount = 0;
-		uint32_t dataCount = 0;
 		const glm::vec3 cameraPosition(glm::vec3(m_UBVoxelScene.CameraPosition));
 		for (auto& bvhNode : m_ModelsBVH.GetNodes())
 		{
@@ -352,28 +354,65 @@ namespace XYZ {
 			+ sizeof(SSBOBVH::Padding)
 			+ sizeof(VoxelModelBVHNode) * nodeCount;
 
-		const uint32_t secondUpdateSize = sizeof(uint32_t) * dataCount;
-		const uint32_t secondUpdateOffset =
-			sizeof(SSBOBVH::NodeCount)
-			+ sizeof(SSBOBVH::Padding)
-			+ sizeof(SSBOBVH::Nodes);
-
 		m_StorageBufferSet->Update(&m_SSBOBVH, firstUpdateSize, 0, SSBOBVH::Binding, SSBOBVH::Set);
-		void* secondUpdateData = &reinterpret_cast<uint8_t*>(&m_SSBOBVH)[secondUpdateOffset];
-		m_StorageBufferSet->Update(secondUpdateData, secondUpdateSize, secondUpdateOffset, SSBOBVH::Binding, SSBOBVH::Set);
+	}
+
+	void VoxelRenderer::updateModelGridSSBO()
+	{
+		XYZ_PROFILE_FUNC("VoxelRenderer::updateModelGridSSBO");
+		
+		uint32_t cellCount = 0;
+		uint32_t modelCount = 0;
+		m_SSBOModelGrid.CellSize = m_ModelsGrid.GetCellSize();
+		m_SSBOModelGrid.InverseTransform = glm::inverse(glm::translate(glm::mat4(1.0f), m_ModelsGrid.GetPosition()));
+
+		for (const auto& modelCell : m_ModelsGrid.GetCells())
+		{
+			auto& cell = m_SSBOModelGrid.Cells[cellCount];
+			cell.ModelOffset = modelCount;
+			cell.ModelCount = static_cast<uint32_t>(modelCell.size());
+			for (const int32_t modelIndex : modelCell)
+			{
+				m_SSBOModelGrid.ModelIndices[modelCount] = modelIndex;
+				modelCount++;
+			}
+
+			cellCount++;
+		}
+
+		const uint32_t firstUpdateSize =
+				sizeof(SSBOModelGrid::Dimensions)
+			+	sizeof(SSBOModelGrid::CellSize)
+			+	sizeof(SSBOModelGrid::InverseTransform)
+			+	sizeof(SSBOGridCell) * cellCount;
+
+		const uint32_t secondUpdateSize = sizeof(uint32_t) * modelCount;
+		const uint32_t secondUpdateOffset =
+				sizeof(SSBOModelGrid::Dimensions)
+			+	sizeof(SSBOModelGrid::CellSize)
+			+	sizeof(SSBOModelGrid::InverseTransform)
+			+	sizeof(SSBOModelGrid::Cells);
+
+
+		m_StorageBufferSet->Update(&m_SSBOModelGrid, firstUpdateSize, 0, SSBOModelGrid::Binding, SSBOModelGrid::Set);
+		void* secondUpdateData = &reinterpret_cast<uint8_t*>(&m_SSBOModelGrid)[secondUpdateOffset];
+		m_StorageBufferSet->Update(secondUpdateData, secondUpdateSize, secondUpdateOffset, SSBOModelGrid::Binding, SSBOModelGrid::Set);
 	}
 
 	void VoxelRenderer::submitSubmesh(const Ref<VoxelMesh>& mesh, const VoxelSubmesh& submesh, const glm::mat4& transform, uint32_t submeshIndex)
 	{		
 		const uint32_t voxelCount = static_cast<uint32_t>(submesh.ColorIndices.size());
 
-		auto& renderModel = m_RenderModels.emplace_back();
+		VoxelRenderModel renderModel;
 		renderModel.BoundingBox =  VoxelModelToAABB(transform, submesh.Width, submesh.Height, submesh.Depth, submesh.VoxelSize);
-		renderModel.SubmeshIndex = submeshIndex;
-		renderModel.Transform = transform;
-		renderModel.Mesh = mesh;
-
-		m_Statistics.ModelCount++;
+		if (renderModel.BoundingBox.InsideFrustum(m_Frustum))
+		{
+			renderModel.SubmeshIndex = submeshIndex;
+			renderModel.Transform = transform;
+			renderModel.Mesh = mesh;
+			m_RenderModels.push_back(renderModel);
+			m_Statistics.ModelCount++;
+		}
 	}
 
 	void VoxelRenderer::clearPass()
@@ -489,6 +528,7 @@ namespace XYZ {
 			m_RaymarchMaterial
 		);
 
+		Bool32 useModelGrid = m_UseAABBGrid;
 		Bool32 useBVH = m_UseBVH;
 		Bool32 showBVH = m_ShowBVH;
 		Bool32 showDepth = m_ShowDepth;
@@ -498,7 +538,7 @@ namespace XYZ {
 			m_RaymarchPipeline,
 			nullptr,
 			m_WorkGroups.x, m_WorkGroups.y, 1,
-			PushConstBuffer{ useBVH,  showBVH, showDepth, showNormals }
+			PushConstBuffer{ useModelGrid, useBVH,  showBVH, showDepth, showNormals }
 		);
 
 
@@ -540,7 +580,11 @@ namespace XYZ {
 			m_ViewportSize.x / 2,
 			m_ViewportSize.y / 2
 		};
-		m_DebugRenderer->ShowBVH(m_ModelsBVH, m_ShowBVHDepth);
+		
+		if (m_UseAABBGrid)
+			m_DebugRenderer->ShowAABBGrid(m_ModelsGrid);
+		if (m_UseBVH)
+			m_DebugRenderer->ShowBVH(m_ModelsBVH, m_ShowBVHDepth);
 		//for (const auto& model : m_RenderModels)
 		//{
 		//	if (m_DebugOpaque)
@@ -711,6 +755,20 @@ namespace XYZ {
 			}
 			m_ModelsBVH.Construct(constructData);
 		}
+		if (m_UseAABBGrid)
+		{
+			AABB sceneAABB(glm::vec3(FLT_MAX), glm::vec3(FLT_MIN));
+			for (auto model : m_RenderModelsSorted)
+				sceneAABB.Union(model->BoundingBox);
+
+			const glm::vec3 aabbSize = sceneAABB.GetSize();
+			const uint32_t gridSize = 5;
+			const float cellSize = std::max(aabbSize.x, std::max(aabbSize.y, aabbSize.z)) / gridSize;
+
+			m_ModelsGrid.Initialize(sceneAABB.Min, gridSize, gridSize, gridSize, cellSize);
+			for (auto model : m_RenderModelsSorted)
+				m_ModelsGrid.Insert(model->BoundingBox, model->ModelIndex, m_Frustum);
+		}
 		
 		// Pass it to ssbo data
 		for (auto& [key, meshAllocation] : m_VoxelMeshBuckets)
@@ -746,6 +804,8 @@ namespace XYZ {
 		updateVoxelModelsSSBO();
 		if (m_UseBVH)
 			updateBVHSSBO();
+		if (m_UseAABBGrid)
+			updateModelGridSSBO();
 	}
 	
 	void VoxelRenderer::createDefaultPipelines()

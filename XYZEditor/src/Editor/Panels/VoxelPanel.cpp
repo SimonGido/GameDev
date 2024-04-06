@@ -88,7 +88,7 @@ namespace XYZ {
 			:
 			EditorPanel(std::forward<std::string>(name)),
 			m_ViewportSize(0.0f),
-			m_EditorCamera(30.0f, 1.778f, 0.1f, 1000.0f),
+			m_EditorCamera(30.0f, 1.778f, 0.1f, 10000.0f),
 			m_Octree(AABB(glm::vec3(0.0f), glm::vec3(0.0f)), 10),
 			m_World("blabla", 50)
 		{
@@ -272,6 +272,7 @@ namespace XYZ {
 				}
 				//m_World.Update(m_EditorCamera.GetPosition());
 				m_World.Update(glm::vec3(0));
+				int counter = 0;
 				for (const auto& chunkRow : *m_World.GetActiveChunks())
 				{
 					for (const auto& chunk : chunkRow)
@@ -284,11 +285,16 @@ namespace XYZ {
 
 							if (compressed)
 								m_VoxelRenderer->SubmitMesh(chunk.Mesh, glm::mat4(1.0f));
-							//break;
+							counter++;
+
+							//if (counter == 2)
+							//	break;
 						}
-						//break;
+						//if (counter == 2)
+						//	break;
 					}
-					//break;
+					//if (counter == 2)
+					//	break;
 				}
 				
 				for (auto& transform : m_TreeTransforms)

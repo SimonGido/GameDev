@@ -81,6 +81,7 @@ namespace XYZ {
 
 			BVHNode parentNode;
 			parentNode.AABB = AABB::Union(leftNode.AABB, rightNode.AABB);
+
 			parentNode.Left = leftIndex;
 			parentNode.Right = rightIndex;
 			leftNode.Parent = m_Nodes.size();
