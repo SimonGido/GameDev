@@ -755,8 +755,11 @@ namespace XYZ {
 			XYZ_PROFILE_FUNC("VoxelRenderer::prepareModelsSort");		
 			std::sort(m_RenderModelsSorted.begin(), m_RenderModelsSorted.end(), [&](const VoxelRenderModel* a, const VoxelRenderModel* b) {
 				
-				bool isAOpaque = a->Mesh->IsOpaque();
-				bool isBOpaque = b->Mesh->IsOpaque();
+				const VoxelSubmesh& submeshA = a->Mesh->GetSubmeshes()[a->SubmeshIndex];
+				const VoxelSubmesh& submeshB = b->Mesh->GetSubmeshes()[b->SubmeshIndex];
+
+				bool isAOpaque = submeshA.IsOpaque;
+				bool isBOpaque = submeshB.IsOpaque;
 
 				if (isAOpaque && isBOpaque) 
 				{
@@ -822,8 +825,8 @@ namespace XYZ {
 				sceneAABB.Union(model->BoundingBox);
 
 			const glm::vec3 aabbSize = sceneAABB.GetSize();
-			const uint32_t maxDimension = std::max(m_SSBOModelGrid.Dimensions.x, std::max(m_SSBOModelGrid.Dimensions.y, m_SSBOModelGrid.Dimensions.z));
-			const float cellSize = std::max(aabbSize.x, std::max(aabbSize.y, aabbSize.z)) / maxDimension;
+			const uint32_t minDimension = std::min(m_SSBOModelGrid.Dimensions.x, std::min(m_SSBOModelGrid.Dimensions.y, m_SSBOModelGrid.Dimensions.z));
+			const float cellSize = std::max(aabbSize.x, std::max(aabbSize.y, aabbSize.z)) / minDimension;
 
 			m_ModelsGrid.Initialize(sceneAABB.Min, m_SSBOModelGrid.Dimensions.x, m_SSBOModelGrid.Dimensions.y, m_SSBOModelGrid.Dimensions.z, cellSize);
 			for (auto model : m_RenderModelsSorted)

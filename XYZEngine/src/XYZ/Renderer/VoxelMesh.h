@@ -22,7 +22,6 @@ namespace XYZ {
 		virtual const AssetHandle& GetRenderID() const = 0;
 		virtual uint32_t GetNumVoxels() const = 0;
 		virtual uint32_t GetNumCompressedCells() const = 0;
-		virtual bool IsOpaque() const { return true; }
 
 	protected:
 		struct DirtyRange
@@ -87,7 +86,6 @@ namespace XYZ {
 		virtual const AssetHandle& GetRenderID() const override;
 		virtual uint32_t GetNumVoxels() const override { return m_NumVoxels; }
 		virtual uint32_t GetNumCompressedCells() const override { return m_NumCompressedCells; }
-		virtual bool IsOpaque() const { return true; }
 
 		static AssetType GetStaticType() { return AssetType::None; }
 

@@ -95,6 +95,10 @@ namespace XYZ {
 	{
 		auto& submesh = m_Submeshes[submeshIndex];
 		const uint32_t index = Index3D(x, y, z, submesh.Width, submesh.Height);
+		const uint8_t colorIndex = submesh.ColorIndices[index];
+		
+		// TODO: check transparency ( Implement proper counter for transparent voxels )
+
 		submesh.ColorIndices[index] = value;
 		auto& range = m_DirtySubmeshes[submeshIndex];
 		range.Start = std::min(range.Start, index);

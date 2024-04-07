@@ -29,9 +29,11 @@ namespace XYZ {
 		uint32_t CompressScale = 1;
 		float	 VoxelSize = 1.0f;
 		bool	 Compressed = false;
-		
+		bool	 IsOpaque = false;
+
 		std::vector<uint8_t> ColorIndices;
 		std::vector<CompressedCell> CompressedCells;
+
 
 		bool DecompressCell(uint32_t cx, uint32_t cy, uint32_t cz);
 

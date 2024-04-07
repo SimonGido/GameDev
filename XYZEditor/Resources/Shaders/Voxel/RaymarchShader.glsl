@@ -12,7 +12,7 @@
 #define MULTI_COLOR 256
 #define MAX_NODES 16384
 #define STACK_MAX 256
-#define MODEL_GRID_MAX_CELLS 10 * 5 * 10
+#define MODEL_GRID_MAX_CELLS 10 * 10 * 10
 
 const float EPSILON = 0.01;
 const uint OPAQUE = 255;
@@ -732,24 +732,26 @@ void RaycastModelGrid(in Ray cameraRay)
 	if (!RayBoxIntersectionInside(gridRay.Origin, gridRay.Direction, modelGridAABB.Min.xyz, modelGridAABB.Max.xyz, tMin, tMax))
 		return;
 
-	Ray inverseRay; // TODO: for transparent use inverseRay
-	inverseRay.Origin = gridRay.Origin + (gridRay.Direction * tMax);
-	inverseRay.Direction = -gridRay.Direction;
 
-	inverseRay = gridRay;
+	//Ray inverseRay; // TODO: for transparent use inverseRay
+	//inverseRay.Origin = gridRay.Origin + (gridRay.Direction * tMax);
+	//inverseRay.Direction = -gridRay.Direction;
+	//inverseRay = gridRay;
+
 
 
 	ivec3 step = ivec3(
-		(inverseRay.Direction.x > 0.0) ? 1 : -1,
-		(inverseRay.Direction.y > 0.0) ? 1 : -1,
-		(inverseRay.Direction.z > 0.0) ? 1 : -1
+		(gridRay.Direction.x > 0.0) ? 1 : -1,
+		(gridRay.Direction.y > 0.0) ? 1 : -1,
+		(gridRay.Direction.z > 0.0) ? 1 : -1
 	);
 
-	vec3 delta = GridCellSize / inverseRay.Direction * vec3(step);	
+	vec3 delta = GridCellSize / gridRay.Direction * vec3(step);	
 
-	RaymarchState state = CreateRaymarchState(inverseRay, tMin, step, GridDimensions, GridCellSize, ivec3(0,0,0));
-	vec3 rayStart = gridRay.Origin + gridRay.Direction * (tMin - EPSILON);
-	ivec3 startVoxel = ivec3(floor(rayStart / GridCellSize));
+	RaymarchState state = CreateRaymarchState(gridRay, tMin, step, GridDimensions, GridCellSize, ivec3(0,0,0));
+	
+	//vec3 rayStart = gridRay.Origin + gridRay.Direction * (tMin - EPSILON);
+	//ivec3 startVoxel = ivec3(floor(rayStart / GridCellSize));
 
 	//ivec3 maxSteps = abs(startVoxel - state.CurrentVoxel);
 	//state.MaxSteps = maxSteps;
@@ -757,7 +759,8 @@ void RaycastModelGrid(in Ray cameraRay)
 	bool modelDrawn[MAX_MODELS];
 	for (int i = 0; i < NumModels; i++)
 		modelDrawn[i] = false;
-
+	
+	int drawModelCount = 0;
 	float lastDrawDistance = FLT_MAX;
 	while (state.MaxSteps.x >= 0 && state.MaxSteps.y >= 0 && state.MaxSteps.z >= 0)
 	{
@@ -771,7 +774,6 @@ void RaycastModelGrid(in Ray cameraRay)
 			bool currentDraw = false;
 			if (cell.ModelCount != 0)
 			{			
-				int realCount = 0;
 				for (uint i = cell.ModelOffset; i < cell.ModelOffset + cell.ModelCount; i++)
 				{
 					uint modelIndex = GridModelIndices[i];
@@ -782,18 +784,19 @@ void RaycastModelGrid(in Ray cameraRay)
 					{
 						lastDrawDistance = imageLoad(o_DepthImage, textureIndex).r;
 					}
-
 					modelDrawn[modelIndex] = true;
-					realCount++;
+					drawModelCount++;
 				}
-				vec3 gradient = GetGradient(realCount) * 0.1;
-				vec4 origColor = imageLoad(o_Image, textureIndex);
-				origColor.rgb += gradient;
-				imageStore(o_Image, textureIndex, origColor);				
+						
 			}		
 		}
 		PerformStep(state, step, delta);
 	}
+
+	vec3 gradient = GetGradient(drawModelCount) * 0.3;
+	vec4 origColor = imageLoad(o_Image, textureIndex);
+	origColor.rgb += gradient;
+	imageStore(o_Image, textureIndex, vec4(gradient.rgb, origColor.a));		
 }
 
 

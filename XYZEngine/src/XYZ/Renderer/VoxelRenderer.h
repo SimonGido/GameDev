@@ -172,7 +172,7 @@ namespace XYZ {
 
 	struct SSBOModelGrid
 	{
-		static constexpr glm::ivec3 MaxDimensions = { 10,5,10 };
+		static constexpr glm::ivec3 MaxDimensions = { 10,10,10 };
 
 		static constexpr uint32_t Binding = 26;
 		static constexpr uint32_t Set = 0;

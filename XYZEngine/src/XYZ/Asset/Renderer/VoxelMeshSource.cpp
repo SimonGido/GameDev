@@ -48,12 +48,13 @@ namespace XYZ {
 		return true;
 	}
 
-	static void LoadSubmeshModel(VoxelSubmesh& submesh, const ogt_vox_model* voxModel)
+	static void LoadSubmeshModel(VoxelSubmesh& submesh, const ogt_vox_model* voxModel, const std::array<VoxelColor, 256>& colorPallete)
 	{
 		submesh.ColorIndices.resize(voxModel->size_x * voxModel->size_y * voxModel->size_z);
 		submesh.Width = voxModel->size_x;
 		submesh.Height = voxModel->size_y;
 		submesh.Depth = voxModel->size_z;
+		submesh.IsOpaque = true;
 
 		for (uint32_t x = 0; x < voxModel->size_x; ++x)
 		{
@@ -63,6 +64,9 @@ namespace XYZ {
 				{
 					const uint32_t index = Index3D(x, y, z, voxModel->size_x, voxModel->size_y);
 					submesh.ColorIndices[index] = voxModel->voxel_data[index];
+					const uint8_t colorIndex = submesh.ColorIndices[index];
+					if (colorPallete[colorIndex].A < 255)
+						submesh.IsOpaque = false;
 				}
 			}
 		}
@@ -104,7 +108,8 @@ namespace XYZ {
 		for (uint32_t i = 0; i < scene->num_models; ++i)
 		{
 			VoxelSubmesh& submesh = m_Submeshes.emplace_back();
-			LoadSubmeshModel(submesh, scene->models[i]);
+			LoadSubmeshModel(submesh, scene->models[i], m_ColorPallete);
+
 			m_NumVoxels += static_cast<uint32_t>(submesh.ColorIndices.size());
 		}
 

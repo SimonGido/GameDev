@@ -120,6 +120,10 @@ namespace XYZ {
 			}
 		}
 	}
+	const std::unique_ptr<VoxelWorld::ActiveChunkStorage>& VoxelWorld::GetActiveChunks() const
+	{
+		return m_ActiveChunks;
+	}
 	void VoxelWorld::generateChunks(int64_t centerChunkX, int64_t centerChunkZ)
 	{
 		const int64_t chunksWidth = sc_MaxVisibleChunksPerAxis;
@@ -191,12 +195,14 @@ namespace XYZ {
 		submesh.Height = sc_ChunkDimensions.y;
 		submesh.Depth = sc_ChunkDimensions.z;
 		submesh.VoxelSize = sc_ChunkVoxelSize;
+		submesh.IsOpaque = true;
 
 		VoxelSubmesh waterSubmesh;
 		waterSubmesh.Width = sc_ChunkDimensions.x;
 		waterSubmesh.Height = sc_ChunkDimensions.y;
 		waterSubmesh.Depth = sc_ChunkDimensions.z;
 		waterSubmesh.VoxelSize = sc_ChunkVoxelSize;
+		waterSubmesh.IsOpaque = false;
 		
 		const glm::vec3 centerTranslation = -glm::vec3(
 			submesh.Width / 2.0f * submesh.VoxelSize,
