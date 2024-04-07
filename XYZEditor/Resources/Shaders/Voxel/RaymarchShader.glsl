@@ -2,6 +2,7 @@
 #version 460
 #extension GL_EXT_shader_8bit_storage : enable
 
+
 #include "Resources/Shaders/Includes/Math.glsl"
 #include "Resources/Shaders/Includes/PBR.glsl"
 
@@ -11,13 +12,14 @@
 #define MULTI_COLOR 256
 #define MAX_NODES 16384
 #define STACK_MAX 256
-#define MODEL_GRID_MAX_CELLS 5 * 5 * 5
+#define MODEL_GRID_MAX_CELLS 10 * 5 * 10
 
 const float EPSILON = 0.01;
 const uint OPAQUE = 255;
 
 layout(push_constant) uniform Uniforms
 {
+	bool UseOctree;
 	bool UseModelGrid;
 	bool UseBVH;
 	bool ShowBVH;
@@ -48,6 +50,20 @@ struct VoxelModelBVHNode
 	int Data;
 	int Left;
 	int Right;
+};
+
+struct VoxelModelOctreeNode
+{
+	vec4 Min;
+	vec4 Max;
+
+	int  Children[8];
+	
+	bool IsLeaf;
+	int  DataStart;
+	int  DataEnd;
+
+	uint Padding;
 };
 
 
@@ -129,7 +145,15 @@ layout(std430, binding = 26) readonly buffer buffer_ModelGrid
 	float	GridCellSize;
 	mat4	GridInverseTransform;
 	ModelGridCell GridCells[MODEL_GRID_MAX_CELLS];
-	uint		  GridModelIndices[MAX_MODELS];
+	uint	GridModelIndices[];
+};
+
+layout(std430, binding = 27) readonly buffer buffer_Octree
+{		
+	uint OctreeNodeCount;
+	uint OctreePadding[3];
+	VoxelModelOctreeNode OctreeNodes[MAX_NODES];
+	uint OctreeModelIndices[MAX_MODELS];
 };
 
 
@@ -521,13 +545,19 @@ RaymarchResult RaymarchCompressed(in Ray ray, vec4 startColor, float tMin, in Vo
 	return result;
 }
 
-
+bool RayBoxIntersectionInside(in vec3 origin, vec3 direction, in vec3 aabbMin, in vec3 aabbMax, out float tMin, out float tMax)
+{
+	tMin = 0.0;
+	bool result = PointInBox(origin, aabbMin, aabbMax);
+	if (!result)
+		result = RayBoxIntersection(origin, direction, aabbMin, aabbMax, tMin, tMax);
+	return result;
+}
 
 bool ResolveRayModelIntersection(in vec3 origin, vec3 direction, in VoxelModel model, out float tMin, out float tMax)
 {
 	AABB aabb = ModelAABB(model);
-	tMin = 0.0;
-	return RayBoxIntersection(origin, direction, aabb.Min, aabb.Max, tMin, tMax);
+	return RayBoxIntersectionInside(origin, direction, aabb.Min, aabb.Max, tMin, tMax);
 }
 
 
@@ -535,9 +565,8 @@ void StoreHitResult(in RaymarchResult result)
 {
 	ivec2 textureIndex = ivec2(gl_GlobalInvocationID.xy);	
 
-	bool opaque = result.Color.a >= 1.0;
 	result.Color.a = min(result.Color.a, 1.0);
-	if (!opaque)
+	if (result.Color.a < 1.0)
 	{
 		vec4 backColor = imageLoad(o_Image, textureIndex);
 		result.Color = BlendColors(result.Color, backColor);
@@ -588,8 +617,49 @@ bool DrawModel(in Ray cameraRay, in VoxelModel model)
 		result.WorldHit = cameraRay.Origin + (cameraRay.Direction * result.Distance);
 		result.WorldNormal = mat3(model.InverseTransform) * result.Normal;
 		StoreHitResult(result);			
+		return true;
 	}
 	return false;
+}
+
+
+void RaycastOctree(in Ray cameraRay)
+{
+	ivec2 textureIndex = ivec2(gl_GlobalInvocationID.xy);
+	float currentDistance = imageLoad(o_DepthImage, textureIndex).r;
+	int stack[STACK_MAX];
+	int stackIndex = 0;
+	stack[stackIndex++] = 0; // Start with the root node
+	
+	while (stackIndex > 0)
+	{
+		stackIndex--;
+		int nodeIndex = stack[stackIndex];
+		VoxelModelOctreeNode node = OctreeNodes[nodeIndex];
+			
+		for (int i = node.DataStart; i < node.DataEnd; i++)
+		{
+			VoxelModel model = Models[OctreeModelIndices[i]];
+			DrawModel(cameraRay, model);		
+		}
+
+		if (!node.IsLeaf)
+		{
+			for (int c = 0; c < 8; c++)
+			{
+				VoxelModelOctreeNode child = OctreeNodes[node.Children[c]];
+				if (child.DataEnd - child.DataStart == 0 && child.IsLeaf)
+					continue;
+
+				float tMin;
+				float tMax;
+				if (RayBoxIntersection(cameraRay.Origin, cameraRay.Direction, child.Min.xyz, child.Max.xyz, tMin, tMax))
+				{
+					stack[stackIndex++] = node.Children[c];
+				}
+			}
+		}
+	}
 }
 
 
@@ -602,12 +672,8 @@ void RaycastBVH(in Ray cameraRay)
 
 	float tMin = 0.0;
 	float tMax = 0.0;
-	if (!RayBoxIntersection(cameraRay.Origin, cameraRay.Direction, root.Min.xyz, root.Max.xyz, tMin, tMax))
+	if (!RayBoxIntersectionInside(cameraRay.Origin, cameraRay.Direction, root.Min.xyz, root.Max.xyz, tMin, tMax))
 		return;
-
-	Ray inverseRay;
-	inverseRay.Origin = cameraRay.Origin + (cameraRay.Direction * tMax);
-	inverseRay.Direction = -cameraRay.Direction;
 
 	int stackIndex = 0;
 	uint stack[STACK_MAX];
@@ -621,7 +687,7 @@ void RaycastBVH(in Ray cameraRay)
 		uint nodeIndex = stack[stackIndex];
 		VoxelModelBVHNode node = Nodes[nodeIndex];
 
-		if (RayAABBOverlap(inverseRay.Origin, inverseRay.Direction, node.Min.xyz, node.Max.xyz))
+		if (RayAABBOverlap(cameraRay.Origin, cameraRay.Direction, node.Min.xyz, node.Max.xyz))
 		{		
 			if (node.Data != -1)
 			{
@@ -663,12 +729,14 @@ void RaycastModelGrid(in Ray cameraRay)
 	float tMin = 0.0;
 	float tMax;
 
-	if (!RayBoxIntersection(gridRay.Origin, gridRay.Direction, modelGridAABB.Min.xyz, modelGridAABB.Max.xyz, tMin, tMax))
+	if (!RayBoxIntersectionInside(gridRay.Origin, gridRay.Direction, modelGridAABB.Min.xyz, modelGridAABB.Max.xyz, tMin, tMax))
 		return;
 
-	Ray inverseRay;
+	Ray inverseRay; // TODO: for transparent use inverseRay
 	inverseRay.Origin = gridRay.Origin + (gridRay.Direction * tMax);
 	inverseRay.Direction = -gridRay.Direction;
+
+	inverseRay = gridRay;
 
 
 	ivec3 step = ivec3(
@@ -678,25 +746,51 @@ void RaycastModelGrid(in Ray cameraRay)
 	);
 
 	vec3 delta = GridCellSize / inverseRay.Direction * vec3(step);	
-	RaymarchState state = CreateRaymarchState(inverseRay, 0.0, step, GridDimensions, GridCellSize, ivec3(0,0,0));
 
+	RaymarchState state = CreateRaymarchState(inverseRay, tMin, step, GridDimensions, GridCellSize, ivec3(0,0,0));
+	vec3 rayStart = gridRay.Origin + gridRay.Direction * (tMin - EPSILON);
+	ivec3 startVoxel = ivec3(floor(rayStart / GridCellSize));
+
+	//ivec3 maxSteps = abs(startVoxel - state.CurrentVoxel);
+	//state.MaxSteps = maxSteps;
+
+	bool modelDrawn[MAX_MODELS];
+	for (int i = 0; i < NumModels; i++)
+		modelDrawn[i] = false;
+
+	float lastDrawDistance = FLT_MAX;
 	while (state.MaxSteps.x >= 0 && state.MaxSteps.y >= 0 && state.MaxSteps.z >= 0)
 	{
 		if (IsValidVoxel(state.CurrentVoxel, GridDimensions.x, GridDimensions.y, GridDimensions.z))
-		{
+		{			
+			if (state.Distance > lastDrawDistance)
+				break;
+
 			uint cellIndex = Index3D(state.CurrentVoxel, GridDimensions.x, GridDimensions.y);
 			ModelGridCell cell = GridCells[cellIndex];
+			bool currentDraw = false;
 			if (cell.ModelCount != 0)
 			{			
+				int realCount = 0;
 				for (uint i = cell.ModelOffset; i < cell.ModelOffset + cell.ModelCount; i++)
 				{
 					uint modelIndex = GridModelIndices[i];
+					if (modelDrawn[modelIndex])
+						continue;
 					VoxelModel model = Models[modelIndex];
-					DrawModel(cameraRay, model);
+					if (DrawModel(cameraRay, model))
+					{
+						lastDrawDistance = imageLoad(o_DepthImage, textureIndex).r;
+					}
+
+					modelDrawn[modelIndex] = true;
+					realCount++;
 				}
-			}
-			//vec3 gradient = GetGradient(cell.ModelCount + 5) * 0.1;
-			//imageStore(o_Image, textureIndex, vec4(gradient,1));
+				vec3 gradient = GetGradient(realCount) * 0.1;
+				vec4 origColor = imageLoad(o_Image, textureIndex);
+				origColor.rgb += gradient;
+				imageStore(o_Image, textureIndex, origColor);				
+			}		
 		}
 		PerformStep(state, step, delta);
 	}
@@ -718,6 +812,10 @@ void main()
 
 	Ray cameraRay = CreateRay(u_CameraPosition.xyz, textureIndex);
 
+	if (u_Uniforms.UseOctree)
+	{
+		RaycastOctree(cameraRay);
+	}
 	if (u_Uniforms.UseBVH)
 	{
 		RaycastBVH(cameraRay);

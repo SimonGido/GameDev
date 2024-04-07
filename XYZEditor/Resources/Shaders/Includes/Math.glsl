@@ -187,7 +187,7 @@ bool RayBoxIntersection(vec3 origin, vec3 direction, vec3 lb, vec3 rt, out float
     tfar = min(min(max(t1, t2), max(t3, t4)), max(t5, t6));
 
     // if tmax < 0, ray (line) is intersecting AABB, but the whole AABB is behind us
-    if (tfar < 0.0)
+    if (tnear < 0.0)
     { 
         return false;
     }

@@ -87,7 +87,7 @@ namespace XYZ {
 		virtual const AssetHandle& GetRenderID() const override;
 		virtual uint32_t GetNumVoxels() const override { return m_NumVoxels; }
 		virtual uint32_t GetNumCompressedCells() const override { return m_NumCompressedCells; }
-		virtual bool IsOpaque() const { return false; }
+		virtual bool IsOpaque() const { return true; }
 
 		static AssetType GetStaticType() { return AssetType::None; }
 

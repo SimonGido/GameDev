@@ -35,6 +35,8 @@ namespace XYZ {
 
 
 	VoxelRenderer::VoxelRenderer()
+		:
+		m_ModelsOctree(AABB(glm::vec3(-2048, -64, -2048), glm::vec3(2048)), 4)
 	{
 		m_CommandBuffer = PrimaryRenderCommandBuffer::Create(0, "VoxelRenderer");
 		m_CommandBuffer->CreateTimestampQueries(GPUTimeQueries::Count());
@@ -51,6 +53,7 @@ namespace XYZ {
 		m_StorageBufferSet->Create(SSBOVoxelComputeData::MaxSize, SSBOVoxelComputeData::Set, SSBOVoxelComputeData::Binding, false, true);
 		m_StorageBufferSet->Create(sizeof(SSBOBVH), SSBOBVH::Set, SSBOBVH::Binding);
 		m_StorageBufferSet->Create(sizeof(SSBOModelGrid), SSBOModelGrid::Set, SSBOModelGrid::Binding);
+		m_StorageBufferSet->Create(sizeof(SSBOOCtree), SSBOOCtree::Set, SSBOOCtree::Binding);
 
 		m_VoxelStorageAllocator = Ref<StorageBufferAllocator>::Create(SSBOVoxels::MaxVoxels, SSBOVoxels::Binding, SSBOVoxels::Set);
 		m_ColorStorageAllocator = Ref<StorageBufferAllocator>::Create(SSBOColors::MaxSize, SSBOColors::Binding, SSBOColors::Set);
@@ -95,6 +98,7 @@ namespace XYZ {
 		updateViewportSize();
 		updateUniformBufferSet();
 		m_ModelsBVH.Clear();
+		m_ModelsOctree.Clear();
 
 	}
 	void VoxelRenderer::EndScene()
@@ -283,6 +287,7 @@ namespace XYZ {
 			ImGui::NewLine();
 
 			ImGui::Checkbox("AABB Grid", &m_UseAABBGrid);
+			ImGui::Checkbox("Octree", &m_UseOctree);
 			ImGui::Checkbox("BVH", &m_UseBVH);
 			ImGui::Checkbox("Show BVH", &m_ShowBVH);
 
@@ -316,6 +321,7 @@ namespace XYZ {
 		ImGui::End();
 	}
 
+
 	
 	void VoxelRenderer::updateVoxelModelsSSBO()
 	{
@@ -328,6 +334,46 @@ namespace XYZ {
 
 		m_StorageBufferSet->Update((void*)&m_SSBOVoxelModels, voxelModelsUpdateSize, 0, SSBOVoxelModels::Binding, SSBOVoxelModels::Set);
 		
+	}
+
+	void VoxelRenderer::updateOctreeSSBO()
+	{
+		XYZ_PROFILE_FUNC("VoxelRenderer::updateOctreeSSBO");
+		// Update octree
+		uint32_t nodeCount = 0;
+		uint32_t dataCount = 0;
+		const glm::vec3 cameraPosition(glm::vec3(m_UBVoxelScene.CameraPosition));
+		for (auto& octreeNode : m_ModelsOctree.GetNodes())
+		{
+			auto& node = m_SSBOOctree.Nodes[nodeCount];
+			memcpy(node.Children, octreeNode.Children, 8 * sizeof(uint32_t));
+			node.IsLeaf = octreeNode.IsLeaf;
+			node.Max = glm::vec4(octreeNode.BoundingBox.Max, 1.0f);
+			node.Min = glm::vec4(octreeNode.BoundingBox.Min, 1.0f);
+			node.DataStart = dataCount;
+			for (const auto& data : octreeNode.Data)
+			{
+				m_SSBOOctree.ModelIndices[dataCount++] = data.Data;
+			}
+			node.DataEnd = dataCount;
+			nodeCount++;
+		}
+		m_SSBOOctree.NodeCount = nodeCount;
+
+		const uint32_t firstUpdateSize =
+			sizeof(SSBOOCtree::NodeCount)
+			+ sizeof(SSBOOCtree::Padding)
+			+ sizeof(VoxelModelOctreeNode) * nodeCount;
+
+		const uint32_t secondUpdateSize = sizeof(uint32_t) * dataCount;
+		const uint32_t secondUpdateOffset =
+			sizeof(SSBOOCtree::NodeCount)
+			+ sizeof(SSBOOCtree::Padding)
+			+ sizeof(SSBOOCtree::Nodes);
+
+		m_StorageBufferSet->Update(&m_SSBOOctree, firstUpdateSize, 0, SSBOOCtree::Binding, SSBOOCtree::Set);
+		void* secondUpdateData = &reinterpret_cast<uint8_t*>(&m_SSBOOctree)[secondUpdateOffset];
+		m_StorageBufferSet->Update(secondUpdateData, secondUpdateSize, secondUpdateOffset, SSBOOCtree::Binding, SSBOOCtree::Set);
 	}
 
 	void VoxelRenderer::updateBVHSSBO()
@@ -373,7 +419,7 @@ namespace XYZ {
 			cell.ModelCount = static_cast<uint32_t>(modelCell.size());
 			for (const int32_t modelIndex : modelCell)
 			{
-				m_SSBOModelGrid.ModelIndices[modelCount] = modelIndex;
+				m_SSBOModelGrid.ModelIndices[modelCount] = static_cast<uint16_t>(modelIndex);
 				modelCount++;
 			}
 
@@ -386,7 +432,7 @@ namespace XYZ {
 			+	sizeof(SSBOModelGrid::InverseTransform)
 			+	sizeof(SSBOGridCell) * cellCount;
 
-		const uint32_t secondUpdateSize = sizeof(uint32_t) * modelCount;
+		const uint32_t secondUpdateSize = sizeof(SSBOModelGrid::ModelIndices[0]) * modelCount;
 		const uint32_t secondUpdateOffset =
 				sizeof(SSBOModelGrid::Dimensions)
 			+	sizeof(SSBOModelGrid::CellSize)
@@ -528,6 +574,7 @@ namespace XYZ {
 			m_RaymarchMaterial
 		);
 
+		Bool32 useOctree = m_UseOctree;
 		Bool32 useModelGrid = m_UseAABBGrid;
 		Bool32 useBVH = m_UseBVH;
 		Bool32 showBVH = m_ShowBVH;
@@ -538,7 +585,7 @@ namespace XYZ {
 			m_RaymarchPipeline,
 			nullptr,
 			m_WorkGroups.x, m_WorkGroups.y, 1,
-			PushConstBuffer{ useModelGrid, useBVH,  showBVH, showDepth, showNormals }
+			PushConstBuffer{ useOctree, useModelGrid, useBVH,  showBVH, showDepth, showNormals }
 		);
 
 
@@ -743,6 +790,19 @@ namespace XYZ {
 			allocation.Models.push_back(model);
 			modelIndex++;
 		}
+		if (m_UseOctree)
+		{
+			for (auto model : m_RenderModelsSorted)
+			{
+				if (m_UseOctree)
+					m_ModelsOctree.InsertData(model->BoundingBox, modelIndex);
+				auto& allocation = m_VoxelMeshBuckets[model->Mesh->GetHandle()];
+				model->ModelIndex = modelIndex;
+				allocation.Mesh = model->Mesh;
+				allocation.Models.push_back(model);
+				modelIndex++;
+			}
+		}
 		
 		if (m_UseBVH)
 		{
@@ -762,12 +822,12 @@ namespace XYZ {
 				sceneAABB.Union(model->BoundingBox);
 
 			const glm::vec3 aabbSize = sceneAABB.GetSize();
-			const uint32_t gridSize = 5;
-			const float cellSize = std::max(aabbSize.x, std::max(aabbSize.y, aabbSize.z)) / gridSize;
+			const uint32_t maxDimension = std::max(m_SSBOModelGrid.Dimensions.x, std::max(m_SSBOModelGrid.Dimensions.y, m_SSBOModelGrid.Dimensions.z));
+			const float cellSize = std::max(aabbSize.x, std::max(aabbSize.y, aabbSize.z)) / maxDimension;
 
-			m_ModelsGrid.Initialize(sceneAABB.Min, gridSize, gridSize, gridSize, cellSize);
+			m_ModelsGrid.Initialize(sceneAABB.Min, m_SSBOModelGrid.Dimensions.x, m_SSBOModelGrid.Dimensions.y, m_SSBOModelGrid.Dimensions.z, cellSize);
 			for (auto model : m_RenderModelsSorted)
-				m_ModelsGrid.Insert(model->BoundingBox, model->ModelIndex, m_Frustum);
+				m_ModelsGrid.Insert(model->BoundingBox, model->ModelIndex);
 		}
 		
 		// Pass it to ssbo data
@@ -806,6 +866,9 @@ namespace XYZ {
 			updateBVHSSBO();
 		if (m_UseAABBGrid)
 			updateModelGridSSBO();
+
+		if (m_UseOctree)
+			updateOctreeSSBO();
 	}
 	
 	void VoxelRenderer::createDefaultPipelines()

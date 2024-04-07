@@ -10,6 +10,8 @@
 #include "XYZ/Scene/Scene.h"
 #include "XYZ/Utils/DataStructures/BVH.h"
 #include "XYZ/Utils/DataStructures/AABBGrid.h"
+#include "XYZ/Utils/DataStructures/Octree.h"
+
 #include "XYZ/Asset/Renderer/VoxelMeshSource.h"
 
 namespace XYZ {
@@ -24,6 +26,21 @@ namespace XYZ {
 		int32_t Left = BVHNode::Invalid;
 		int32_t Right = BVHNode::Invalid;
 	};
+
+	struct VoxelModelOctreeNode
+	{
+		glm::vec4 Min;
+		glm::vec4 Max;
+
+		int32_t Children[8]{ -1 };
+
+		Bool32	IsLeaf;
+		int32_t DataStart;
+		int32_t DataEnd;
+
+		Padding<4> Padding;
+	};
+
 
 
 	struct UBVoxelScene
@@ -133,6 +150,20 @@ namespace XYZ {
 		VoxelModelBVHNode	 Nodes[MaxNodes];
 	};
 
+	struct SSBOOCtree
+	{
+		static constexpr uint32_t MaxNodes = 16384;
+
+		static constexpr uint32_t Binding = 27;
+		static constexpr uint32_t Set = 0;
+
+
+		uint32_t			 NodeCount;
+		Padding<12>			 Padding;
+		VoxelModelOctreeNode Nodes[MaxNodes];
+		uint32_t			 ModelIndices[SSBOVoxelModels::MaxModels];
+	};
+
 	struct SSBOGridCell
 	{
 		uint32_t ModelOffset = 0;
@@ -141,7 +172,7 @@ namespace XYZ {
 
 	struct SSBOModelGrid
 	{
-		static constexpr glm::ivec3 MaxDimensions = { 5,5,5 };
+		static constexpr glm::ivec3 MaxDimensions = { 10,5,10 };
 
 		static constexpr uint32_t Binding = 26;
 		static constexpr uint32_t Set = 0;
@@ -152,7 +183,7 @@ namespace XYZ {
 		glm::mat4			 InverseTransform;
 
 		SSBOGridCell		 Cells[MaxDimensions.x * MaxDimensions.y * MaxDimensions.z];
-		uint32_t			 ModelIndices[SSBOVoxelModels::MaxModels];
+		uint32_t			 ModelIndices[SSBOVoxelModels::MaxModels * 5];
 	};
 
 	struct VoxelRendererCamera
@@ -269,6 +300,7 @@ namespace XYZ {
 		void updateVoxelModelsSSBO();
 		void updateBVHSSBO();
 		void updateModelGridSSBO();
+		void updateOctreeSSBO();
 
 		void createDefaultPipelines();
 		Ref<PipelineCompute> getEffectPipeline(const Ref<MaterialAsset>& material);
@@ -314,6 +346,7 @@ namespace XYZ {
 		SSBOVoxelModels			m_SSBOVoxelModels;
 		SSBOBVH					m_SSBOBVH;
 		SSBOModelGrid			m_SSBOModelGrid;
+		SSBOOCtree				m_SSBOOctree;
 
 		SSGIValues				m_SSGIValues;
 		glm::ivec2				m_ViewportSize;
@@ -324,6 +357,7 @@ namespace XYZ {
 		Math::Frustum			m_Frustum;
 	
 		bool					m_UseSSGI = false;
+		bool					m_UseOctree = false;
 		bool					m_UseBVH = false;
 		bool					m_UseAABBGrid = false;
 		bool					m_ShowBVH = false;
@@ -354,8 +388,9 @@ namespace XYZ {
 		};
 		GPUTimeQueries m_GPUTimeQueries;
 
-		BVH m_ModelsBVH;
-		AABBGrid m_ModelsGrid;
+		BVH			m_ModelsBVH;
+		AABBGrid	m_ModelsGrid;
+		Octree		m_ModelsOctree;
 
 		std::unique_ptr<VoxelRendererDebug> m_DebugRenderer;
 	};
