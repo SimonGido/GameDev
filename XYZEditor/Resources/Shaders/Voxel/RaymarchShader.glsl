@@ -10,16 +10,14 @@
 #define MAX_COLORS 1024
 #define MAX_MODELS 1024
 #define MULTI_COLOR 256
-#define MAX_NODES 16384
 #define STACK_MAX 256
-#define MODEL_GRID_MAX_CELLS 10 * 10 * 10
+#define MODEL_GRID_MAX_CELLS 10 * 3 * 10
 
 const float EPSILON = 0.01;
 const uint OPAQUE = 255;
 
 layout(push_constant) uniform Uniforms
 {
-	bool UseOctree;
 	bool UseModelGrid;
 	bool UseBVH;
 	bool ShowBVH;
@@ -50,20 +48,6 @@ struct VoxelModelBVHNode
 	int Data;
 	int Left;
 	int Right;
-};
-
-struct VoxelModelOctreeNode
-{
-	vec4 Min;
-	vec4 Max;
-
-	int  Children[8];
-	
-	bool IsLeaf;
-	int  DataStart;
-	int  DataEnd;
-
-	uint Padding;
 };
 
 
@@ -136,25 +120,18 @@ layout(std430, binding = 23) readonly buffer buffer_BVH
 {		
 	uint NodeCount;
 	uint Padding[3];
-	VoxelModelBVHNode Nodes[MAX_NODES];
+	VoxelModelBVHNode Nodes[];
 };
 
 layout(std430, binding = 26) readonly buffer buffer_ModelGrid
 {		
 	ivec3	GridDimensions;
-	float	GridCellSize;
+	vec3	GridCellSize;
 	mat4	GridInverseTransform;
 	ModelGridCell GridCells[MODEL_GRID_MAX_CELLS];
 	uint	GridModelIndices[];
 };
 
-layout(std430, binding = 27) readonly buffer buffer_Octree
-{		
-	uint OctreeNodeCount;
-	uint OctreePadding[3];
-	VoxelModelOctreeNode OctreeNodes[MAX_NODES];
-	uint OctreeModelIndices[MAX_MODELS];
-};
 
 
 layout(binding = 21, rgba32f) uniform image2D o_Image;
@@ -359,9 +336,7 @@ void PerformStep(inout RaymarchState state, ivec3 step, vec3 delta)
 	}	
 }
 
-
-
-RaymarchState CreateRaymarchState(in Ray ray, float tMin, ivec3 step, ivec3 maxSteps, float voxelSize, ivec3 decompressedVoxelOffset)
+RaymarchState CreateRaymarchState(in Ray ray, float tMin, ivec3 step, ivec3 maxSteps, vec3 voxelSize, ivec3 decompressedVoxelOffset)
 {
 	RaymarchState state;
 	vec3 rayStart					= ray.Origin + ray.Direction * (tMin - EPSILON);
@@ -372,14 +347,19 @@ RaymarchState CreateRaymarchState(in Ray ray, float tMin, ivec3 step, ivec3 maxS
 	state.DecompressedVoxelOffset	= decompressedVoxelOffset;
 	
 	vec3 next_boundary = vec3(
-		float((step.x > 0) ? decompressedCurrentVoxel.x + 1 : decompressedCurrentVoxel.x) * voxelSize,
-		float((step.y > 0) ? decompressedCurrentVoxel.y + 1 : decompressedCurrentVoxel.y) * voxelSize,
-		float((step.z > 0) ? decompressedCurrentVoxel.z + 1 : decompressedCurrentVoxel.z) * voxelSize
+		float((step.x > 0) ? decompressedCurrentVoxel.x + 1 : decompressedCurrentVoxel.x) * voxelSize.x,
+		float((step.y > 0) ? decompressedCurrentVoxel.y + 1 : decompressedCurrentVoxel.y) * voxelSize.y,
+		float((step.z > 0) ? decompressedCurrentVoxel.z + 1 : decompressedCurrentVoxel.z) * voxelSize.z
 	);
 
 	state.Max = tMin + (next_boundary - rayStart) / ray.Direction; // we will move along the axis with the smallest value
 	state.Normal = GetNormalFromState(state, step);
 	return state;
+}
+
+RaymarchState CreateRaymarchState(in Ray ray, float tMin, ivec3 step, ivec3 maxSteps, float voxelSize, ivec3 decompressedVoxelOffset)
+{
+	return CreateRaymarchState(ray, tMin, step, maxSteps, vec3(voxelSize, voxelSize, voxelSize), decompressedVoxelOffset);
 }
 
 
@@ -623,46 +603,6 @@ bool DrawModel(in Ray cameraRay, in VoxelModel model)
 }
 
 
-void RaycastOctree(in Ray cameraRay)
-{
-	ivec2 textureIndex = ivec2(gl_GlobalInvocationID.xy);
-	float currentDistance = imageLoad(o_DepthImage, textureIndex).r;
-	int stack[STACK_MAX];
-	int stackIndex = 0;
-	stack[stackIndex++] = 0; // Start with the root node
-	
-	while (stackIndex > 0)
-	{
-		stackIndex--;
-		int nodeIndex = stack[stackIndex];
-		VoxelModelOctreeNode node = OctreeNodes[nodeIndex];
-			
-		for (int i = node.DataStart; i < node.DataEnd; i++)
-		{
-			VoxelModel model = Models[OctreeModelIndices[i]];
-			DrawModel(cameraRay, model);		
-		}
-
-		if (!node.IsLeaf)
-		{
-			for (int c = 0; c < 8; c++)
-			{
-				VoxelModelOctreeNode child = OctreeNodes[node.Children[c]];
-				if (child.DataEnd - child.DataStart == 0 && child.IsLeaf)
-					continue;
-
-				float tMin;
-				float tMax;
-				if (RayBoxIntersection(cameraRay.Origin, cameraRay.Direction, child.Min.xyz, child.Max.xyz, tMin, tMax))
-				{
-					stack[stackIndex++] = node.Children[c];
-				}
-			}
-		}
-	}
-}
-
-
 void RaycastBVH(in Ray cameraRay)
 {
 	if (NodeCount == 0)
@@ -722,9 +662,9 @@ void RaycastModelGrid(in Ray cameraRay)
 	modelGridAABB.Min.y = 0;
 	modelGridAABB.Min.z = 0;
 
-	modelGridAABB.Max.x = GridDimensions.x * GridCellSize;
-	modelGridAABB.Max.y = GridDimensions.y * GridCellSize;
-	modelGridAABB.Max.z = GridDimensions.z * GridCellSize;
+	modelGridAABB.Max.x = GridDimensions.x * GridCellSize.x;
+	modelGridAABB.Max.y = GridDimensions.y * GridCellSize.y;
+	modelGridAABB.Max.z = GridDimensions.z * GridCellSize.z;
 	
 	float tMin = 0.0;
 	float tMax;
@@ -815,10 +755,6 @@ void main()
 
 	Ray cameraRay = CreateRay(u_CameraPosition.xyz, textureIndex);
 
-	if (u_Uniforms.UseOctree)
-	{
-		RaycastOctree(cameraRay);
-	}
 	if (u_Uniforms.UseBVH)
 	{
 		RaycastBVH(cameraRay);

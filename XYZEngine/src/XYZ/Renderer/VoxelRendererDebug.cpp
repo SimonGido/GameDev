@@ -273,7 +273,7 @@ namespace XYZ {
 	{
 		const glm::vec3& pos = grid.GetPosition();
 		const glm::ivec3 dim = grid.GetDimensions();
-		const float cellSize = grid.GetCellSize();
+		const glm::vec3& cellSize = grid.GetCellSize();
 
 		for (int32_t x = 0; x < dim.x; x++)
 		{
@@ -285,13 +285,13 @@ namespace XYZ {
 					const auto& cell = grid.GetCells()[cellIndex];
 
 					AABB cellAABB;
-					cellAABB.Min.x = pos.x + x * cellSize;
-					cellAABB.Min.y = pos.y + y * cellSize;
-					cellAABB.Min.z = pos.z + z * cellSize;
+					cellAABB.Min.x = pos.x + x * cellSize.x;
+					cellAABB.Min.y = pos.y + y * cellSize.y;
+					cellAABB.Min.z = pos.z + z * cellSize.z;
 
-					cellAABB.Max.x = cellAABB.Min.x + cellSize;
-					cellAABB.Max.y = cellAABB.Min.y + cellSize;
-					cellAABB.Max.z = cellAABB.Min.z + cellSize;
+					cellAABB.Max.x = cellAABB.Min.x + cellSize.x;
+					cellAABB.Max.y = cellAABB.Min.y + cellSize.y;
+					cellAABB.Max.z = cellAABB.Min.z + cellSize.z;
 					submitAABB(cellAABB.Min, cellAABB.Max, c_BoundingBoxColor);
 				}
 			}

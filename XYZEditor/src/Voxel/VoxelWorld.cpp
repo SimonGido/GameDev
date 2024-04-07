@@ -99,7 +99,10 @@ namespace XYZ {
 		if (shiftDirX != 0 || shiftDirZ != 0)
 			m_ActiveChunks = std::move(shiftChunks(shiftDirX, shiftDirZ));
 
+		for (auto gen : m_ChunksGenerated)
+			gen->Canceled = true;
 		m_ChunksGenerated.clear();
+
 		generateChunks(centerChunkX, centerChunkZ);
 		m_LastCenterChunkX = centerChunkX;
 		m_LastCenterChunkZ = centerChunkZ;
@@ -150,7 +153,7 @@ namespace XYZ {
 					gen->IndexX = chunkX;
 					gen->IndexZ = chunkZ;
 					pool.PushJob([this, gen, worldChunkX, worldChunkZ, &forestBiom]() {
-						gen->Chunk = generateChunk(worldChunkX, worldChunkZ, forestBiom);
+						gen->Chunk = generateChunk(worldChunkX, worldChunkZ, forestBiom, gen->Canceled);
 						gen->Finished = true;
 					});
 				}
@@ -181,7 +184,7 @@ namespace XYZ {
 		}
 		return shiftedChunks;
 	}
-	VoxelChunk VoxelWorld::generateChunk(int64_t chunkX, int64_t chunkZ, const VoxelBiom& biom)
+	VoxelChunk VoxelWorld::generateChunk(int64_t chunkX, int64_t chunkZ, const VoxelBiom& biom, bool& cancel)
 	{
 		VoxelChunk chunk;		
 		chunk.X = chunkX;
@@ -246,19 +249,25 @@ namespace XYZ {
 
 				for (uint32_t y = 0; y < genHeight; y++)
 				{
+					if (cancel)
+						return chunk;
+
 					const uint32_t index = Index3D(x, y, z, submesh.Width, submesh.Height);
 					submesh.ColorIndices[index] = 1; // Grass
 				}
 
 				for (uint32_t y = genHeight; y < waterSubmesh.Height / 2; y++)
 				{
+					if (cancel)
+						return chunk;
+
 					const uint32_t index = Index3D(x, y, z, waterSubmesh.Width, waterSubmesh.Height);
 					waterSubmesh.ColorIndices[index] = 2; // Water
 				}
 			}
 		}
-		submesh.Compress(4);
-		waterSubmesh.Compress(4);
+		submesh.Compress(16, cancel);
+		//waterSubmesh.Compress(16);
 		chunk.Mesh->SetSubmeshes({ submesh});
 		chunk.Mesh->SetInstances({ instance });
 

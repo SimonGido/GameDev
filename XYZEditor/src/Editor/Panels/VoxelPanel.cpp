@@ -273,6 +273,7 @@ namespace XYZ {
 				//m_World.Update(m_EditorCamera.GetPosition());
 				m_World.Update(glm::vec3(0));
 				int counter = 0;
+				bool newMeshAllocated = false;
 				for (const auto& chunkRow : *m_World.GetActiveChunks())
 				{
 					for (const auto& chunk : chunkRow)
@@ -282,9 +283,19 @@ namespace XYZ {
 							bool compressed = true;
 							for (auto& submesh : chunk.Mesh->GetSubmeshes())
 								compressed &= submesh.Compressed;
-
-							if (compressed)
-								m_VoxelRenderer->SubmitMesh(chunk.Mesh, glm::mat4(1.0f));
+							bool submited = m_VoxelRenderer->SubmitMesh(chunk.Mesh, glm::mat4(1.0f));
+							//if (compressed)
+							//{
+							//	if (newMeshAllocated)
+							//		continue;
+							//
+							//	bool isMeshAllocated = m_VoxelRenderer->IsMeshAllocated(chunk.Mesh);
+							//	bool submited = m_VoxelRenderer->SubmitMesh(chunk.Mesh, glm::mat4(1.0f));
+							//	if (submited && !isMeshAllocated)
+							//	{
+							//		newMeshAllocated = true;
+							//	}
+							//}
 							counter++;
 
 							//if (counter == 2)

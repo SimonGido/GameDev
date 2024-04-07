@@ -30,8 +30,8 @@ namespace XYZ{
 	class VoxelWorld
 	{
 	public:
-		static constexpr glm::ivec3 sc_ChunkDimensions = glm::ivec3(256, 256, 256);
-		static constexpr uint32_t	sc_ChunkViewDistance = 5; // View distance from center
+		static constexpr glm::ivec3 sc_ChunkDimensions = glm::ivec3(128, 512, 128);
+		static constexpr uint32_t	sc_ChunkViewDistance = 12; // View distance from center
 		static constexpr int64_t    sc_MaxVisibleChunksPerAxis = sc_ChunkViewDistance * 2 + 1;
 		static constexpr float      sc_ChunkVoxelSize = 1.0f;
 		static ThreadQueue<std::vector<uint8_t>> DataPool;
@@ -49,7 +49,7 @@ namespace XYZ{
 
 		std::unique_ptr<ActiveChunkStorage> shiftChunks(int64_t dirX, int64_t dirZ);
 
-		VoxelChunk generateChunk(int64_t chunkX, int64_t chunkZ, const VoxelBiom& biom);
+		VoxelChunk generateChunk(int64_t chunkX, int64_t chunkZ, const VoxelBiom& biom, bool& cancel);
 
 
 	private:
@@ -60,6 +60,7 @@ namespace XYZ{
 			
 			VoxelChunk Chunk;
 			bool Finished = false;
+			bool Canceled = false;
 		};
 
 

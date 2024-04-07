@@ -11,7 +11,7 @@ namespace XYZ {
 		return x + width * (y + height * z);
 	}
 
-	void AABBGrid::Initialize(const glm::vec3& position, uint32_t width, uint32_t height, uint32_t depth, float cellSize)
+	void AABBGrid::Initialize(const glm::vec3& position, uint32_t width, uint32_t height, uint32_t depth, const glm::vec3& cellSize)
 	{
 		m_Position = position;
 		m_Width = width;
@@ -27,13 +27,13 @@ namespace XYZ {
 		const glm::vec3 localMin = aabb.Min - m_Position;
 		const glm::vec3 localMax = aabb.Max - m_Position;
 
-		const int32_t startX = std::floor(localMin.x / m_CellSize);
-		const int32_t startY = std::floor(localMin.y / m_CellSize);
-		const int32_t startZ = std::floor(localMin.z / m_CellSize);
+		const int32_t startX = std::floor(localMin.x / m_CellSize.x);
+		const int32_t startY = std::floor(localMin.y / m_CellSize.y);
+		const int32_t startZ = std::floor(localMin.z / m_CellSize.z);
 
-		const int32_t endX = std::ceil(localMax.x / m_CellSize);
-		const int32_t endY = std::ceil(localMax.y / m_CellSize);
-		const int32_t endZ = std::ceil(localMax.z / m_CellSize);
+		const int32_t endX = std::ceil(localMax.x / m_CellSize.x);
+		const int32_t endY = std::ceil(localMax.y / m_CellSize.y);
+		const int32_t endZ = std::ceil(localMax.z / m_CellSize.z);
 
 		for (int32_t x = startX; x < endX; ++x)
 		{
@@ -61,13 +61,13 @@ namespace XYZ {
 		const glm::vec3 localMin = aabb.Min - m_Position;
 		const glm::vec3 localMax = aabb.Max - m_Position;
 
-		const int32_t startX = std::floor(localMin.x / m_CellSize);
-		const int32_t startY = std::floor(localMin.y / m_CellSize);
-		const int32_t startZ = std::floor(localMin.z / m_CellSize);
+		const int32_t startX = std::floor(localMin.x / m_CellSize.x);
+		const int32_t startY = std::floor(localMin.y / m_CellSize.y);
+		const int32_t startZ = std::floor(localMin.z / m_CellSize.z);
 
-		const int32_t endX = std::ceil(localMax.x / m_CellSize);
-		const int32_t endY = std::ceil(localMax.y / m_CellSize);
-		const int32_t endZ = std::ceil(localMax.z / m_CellSize);
+		const int32_t endX = std::ceil(localMax.x / m_CellSize.x);
+		const int32_t endY = std::ceil(localMax.y / m_CellSize.y);
+		const int32_t endZ = std::ceil(localMax.z / m_CellSize.z);
 
 		for (int32_t x = startX; x < endX; ++x)
 		{
@@ -86,14 +86,14 @@ namespace XYZ {
 
 					AABB cellAABB;
 					cellAABB.Min = glm::vec3(
-						m_Position.x + x * m_CellSize,
-						m_Position.y + y * m_CellSize,
-						m_Position.z + z * m_CellSize
+						m_Position.x + x * m_CellSize.x,
+						m_Position.y + y * m_CellSize.y,
+						m_Position.z + z * m_CellSize.z
 					);
 					cellAABB.Max = glm::vec3(
-						cellAABB.Min.x + m_CellSize,
-						cellAABB.Min.y + m_CellSize,
-						cellAABB.Min.z + m_CellSize
+						cellAABB.Min.x + m_CellSize.x,
+						cellAABB.Min.y + m_CellSize.y,
+						cellAABB.Min.z + m_CellSize.z
 					);
 					if (cellAABB.InsideFrustum(frustum))
 					{
