@@ -627,6 +627,7 @@ void RaycastBVH(in Ray cameraRay)
 	for (int i = 0; i < NumModels; i++)
 		modelDrawn[i] = false;
 
+	int hitCount = 0;
 	while (stackIndex > 0)
 	{
 		stackIndex--;
@@ -643,6 +644,7 @@ void RaycastBVH(in Ray cameraRay)
 				stack[stackIndex++] = node.Left;
 				stack[stackIndex++] = node.Right;
 			}
+			hitCount++;
 		}
 	}
 	for (int i = 0; i < NumModels; i++)
@@ -653,6 +655,13 @@ void RaycastBVH(in Ray cameraRay)
 			VoxelModel model = Models[i];
 			DrawModel(cameraRay, model, drawDistance);
 		}
+	}
+	if (u_Uniforms.ShowBVH)
+	{
+		vec3 gradient = GetGradient(hitCount) * 0.1;
+		vec4 origColor = imageLoad(o_Image, textureIndex);
+		origColor.rgb += gradient;
+		imageStore(o_Image, textureIndex, vec4(gradient.rgb, origColor.a));		
 	}
 }
 
