@@ -621,8 +621,12 @@ void RaycastBVH(in Ray cameraRay)
 	uint stack[STACK_MAX];
 	stack[stackIndex++] = NodeCount - 1; // Start with the root node
 
-	int hitCount = 0;
 	ivec2 textureIndex = ivec2(gl_GlobalInvocationID.xy);
+
+	bool modelDrawn[MAX_MODELS];
+	for (int i = 0; i < NumModels; i++)
+		modelDrawn[i] = false;
+
 	while (stackIndex > 0)
 	{
 		stackIndex--;
@@ -632,25 +636,22 @@ void RaycastBVH(in Ray cameraRay)
 		if (RayAABBOverlap(cameraRay.Origin, cameraRay.Direction, node.Min.xyz, node.Max.xyz))
 		{		
 			if (node.Data != -1)
-			{
-				float drawDistance = FLT_MAX;
-				VoxelModel model = Models[node.Data];
-				DrawModel(cameraRay, model, drawDistance);
-			}
+				modelDrawn[node.Data] = true;
 
-			if (u_Uniforms.ShowBVH)
-			{
-				hitCount++;
-				vec3 gradient = GetGradient(hitCount) * 0.1;
-				vec4 origColor = imageLoad(o_Image, textureIndex);
-				origColor.rgb += gradient;
-				imageStore(o_Image, textureIndex, origColor);
-			}
 			if (node.Left != -1 && node.Right != -1)
 			{
 				stack[stackIndex++] = node.Left;
 				stack[stackIndex++] = node.Right;
 			}
+		}
+	}
+	for (int i = 0; i < NumModels; i++)
+	{
+		if (modelDrawn[i])
+		{
+			float drawDistance = FLT_MAX;
+			VoxelModel model = Models[i];
+			DrawModel(cameraRay, model, drawDistance);
 		}
 	}
 }

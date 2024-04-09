@@ -198,15 +198,9 @@ namespace XYZ {
 		submesh.Height = sc_ChunkDimensions.y;
 		submesh.Depth = sc_ChunkDimensions.z;
 		submesh.VoxelSize = sc_ChunkVoxelSize;
-		submesh.IsOpaque = true;
+		submesh.IsOpaque = false;
 
-		VoxelSubmesh waterSubmesh;
-		waterSubmesh.Width = sc_ChunkDimensions.x;
-		waterSubmesh.Height = sc_ChunkDimensions.y;
-		waterSubmesh.Depth = sc_ChunkDimensions.z;
-		waterSubmesh.VoxelSize = sc_ChunkVoxelSize;
-		waterSubmesh.IsOpaque = false;
-		
+	
 		const glm::vec3 centerTranslation = -glm::vec3(
 			submesh.Width / 2.0f * submesh.VoxelSize,
 			submesh.Height / 2.0f * submesh.VoxelSize,
@@ -235,12 +229,9 @@ namespace XYZ {
 		
 		if (!DataPool.Empty())
 			submesh.ColorIndices = DataPool.PopBack();
-		if (!DataPool.Empty())
-			waterSubmesh.ColorIndices = DataPool.PopBack();
-
+		
 		submesh.ColorIndices.resize(submesh.Width * submesh.Height * submesh.Depth, 0);
-		waterSubmesh.ColorIndices.resize(waterSubmesh.Width * waterSubmesh.Height * waterSubmesh.Depth, 0);
-
+		
 		for (uint32_t x = 0; x < submesh.Width; ++x)
 		{
 			for (uint32_t z = 0; z < submesh.Depth; ++z)
@@ -264,12 +255,12 @@ namespace XYZ {
 					if (cancel)
 						return chunk;
 
-					const uint32_t index = Index3D(x, y, z, waterSubmesh.Width, waterSubmesh.Height);
-					waterSubmesh.ColorIndices[index] = 2; // Water
+					const uint32_t index = Index3D(x, y, z, submesh.Width, submesh.Height);
+					submesh.ColorIndices[index] = 2; // Water
 				}
 			}
 		}
-		submesh.Compress(16, cancel);
+		submesh.Compress(16, cancel, 2); // Do not compress water indices
 
 		chunk.Mesh->SetSubmeshes({ submesh});
 		chunk.Mesh->SetInstances({ instance});

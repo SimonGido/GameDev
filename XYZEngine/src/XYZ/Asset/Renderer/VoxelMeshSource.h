@@ -39,6 +39,7 @@ namespace XYZ {
 
 		int64_t	Compress(uint32_t scale);
 		int64_t	Compress(uint32_t scale, bool& cancel);
+		int64_t	Compress(uint32_t scale, bool& cancel, uint8_t skipColorIndex);
 
 
 		static VoxelSubmesh Compress(uint32_t scale, uint32_t width, uint32_t height, uint32_t depth, float voxelSize, const std::vector<uint8_t>& colorIndices);

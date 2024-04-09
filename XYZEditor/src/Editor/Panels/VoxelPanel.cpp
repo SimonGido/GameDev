@@ -313,7 +313,6 @@ namespace XYZ {
 					const glm::mat4 deerTransform = m_Transforms[i + 2].GetLocalTransform();
 				
 					m_VoxelRenderer->SubmitMesh(m_CastleMesh, castleTransform);
-					break;
 					m_VoxelRenderer->SubmitMesh(m_KnightMesh, knightTransform);
 					m_VoxelRenderer->SubmitMesh(m_DeerMesh, deerTransform, &m_DeerKeyFrame);
 				}
