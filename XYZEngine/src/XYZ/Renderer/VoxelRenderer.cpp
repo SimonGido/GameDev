@@ -132,7 +132,7 @@ namespace XYZ {
 
 	bool VoxelRenderer::SubmitMesh(const Ref<VoxelMesh>& mesh, const glm::mat4& transform)
 	{
-		bool result = true;
+		bool result = false;
 		const auto& submeshes = mesh->GetSubmeshes();
 		for (const auto& instance : mesh->GetInstances())
 		{
@@ -140,13 +140,14 @@ namespace XYZ {
 			const VoxelSubmesh& submesh = submeshes[instance.SubmeshIndex];
 
 		
-			result &= submitSubmesh(mesh, submesh, instanceTransform, instance.SubmeshIndex);
+			result |= submitSubmesh(mesh, submesh, instanceTransform, instance.SubmeshIndex);
 		}	
 		return result;
 	}
 
-	void VoxelRenderer::SubmitMesh(const Ref<VoxelMesh>& mesh, const glm::mat4& transform, const uint32_t* keyFrames)
+	bool VoxelRenderer::SubmitMesh(const Ref<VoxelMesh>& mesh, const glm::mat4& transform, const uint32_t* keyFrames)
 	{
+		bool result = false;
 		const auto& submeshes = mesh->GetSubmeshes();
 		uint32_t index = 0;
 		for (const auto& instance : mesh->GetInstances())
@@ -155,9 +156,10 @@ namespace XYZ {
 			const VoxelSubmesh& submesh = submeshes[submeshIndex];
 			const glm::mat4 instanceTransform = transform * instance.Transform;
 
-			submitSubmesh(mesh, submesh, instanceTransform, submeshIndex);
+			result |= submitSubmesh(mesh, submesh, instanceTransform, submeshIndex);
 			index++;
 		}	
+		return result;
 	}
 
 	Ref<Image2D> VoxelRenderer::GetFinalPassImage() const
@@ -816,6 +818,8 @@ namespace XYZ {
 				model.VoxelSize = submesh.VoxelSize;
 				model.Compressed = false;
 				model.DistanceFromCamera = cmdModel->DistanceFromCamera;
+				model.Opaque = submesh.IsOpaque;
+
 				if (submesh.Compressed)
 				{
 					model.Compressed = true;
@@ -918,19 +922,19 @@ namespace XYZ {
 	{
 		XYZ_PROFILE_FUNC("VoxelRenderer::reallocateVoxels");
 		const auto& submeshes = mesh->GetSubmeshes();
-
+	
 		const uint32_t meshSize = mesh->GetNumVoxels() * sizeof(uint8_t);
 		const uint32_t colorSize = SSBOColors::ColorPalleteSize;
 		const uint32_t compressedCellsSize = mesh->GetNumCompressedCells() * sizeof(VoxelCompressedCell);
-
+	
 		const uint32_t voxelAllocationFlags = m_VoxelStorageAllocator->Allocate(meshSize, allocation.VoxelAllocation);
 		const uint32_t colorAllocationFlags = m_ColorStorageAllocator->Allocate(colorSize, allocation.ColorAllocation);
 		const uint32_t cellAllocationFlags = m_CompressedCellAllocator->Allocate(compressedCellsSize, allocation.CompressAllocation);
-
+	
 		// We call it here to clear it from mesh even if reallocated 
 		auto dirtySubmeshes = mesh->DirtySubmeshes();
 		auto dirtyCells = mesh->DirtyCompressedCells();
-
+	
 		{	// Recreate offsets per submesh
 			uint32_t voxelOffset = allocation.VoxelAllocation.GetOffset();
 			uint32_t cellOffset = allocation.CompressAllocation.GetOffset() / sizeof(VoxelCompressedCell);
@@ -964,7 +968,7 @@ namespace XYZ {
 				const auto& submesh = submeshes[submeshIndex];
 				const uint32_t offset = allocation.Offsets[submeshIndex].Voxel + range.Start; // calculate update offset
 				const uint32_t voxelCount = range.End - range.Start; // calculate num voxels to update
-
+	
 				// Get voxels pointer
 				const uint8_t* updateVoxelData = &submesh.ColorIndices.data()[range.Start];
 				m_StorageBufferSet->Update(updateVoxelData, voxelCount, offset, SSBOVoxels::Binding, SSBOVoxels::Set);
@@ -986,7 +990,7 @@ namespace XYZ {
 			for (auto& [submeshIndex, cells] : dirtyCells)
 			{
 				const auto& submesh = submeshes[submeshIndex];
-
+	
 				for (uint32_t cell : cells)
 				{
 					const uint32_t cellOffset = (allocation.Offsets[submeshIndex].CompressedCell + cell) * sizeof(VoxelCompressedCell);
@@ -995,6 +999,7 @@ namespace XYZ {
 				}
 			}
 		}
-
+	
 	}
+	
 }

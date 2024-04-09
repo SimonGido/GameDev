@@ -68,7 +68,8 @@ namespace XYZ {
 		uint32_t    CompressScale;
 		Bool32		Compressed = false;
 		float		DistanceFromCamera;
-		Padding<8>	Padding;
+		bool		Opaque;
+		Padding<4>	Padding;
 	};
 
 
@@ -181,7 +182,7 @@ namespace XYZ {
 		void SetViewportSize(uint32_t width, uint32_t height);
 
 		bool SubmitMesh(const Ref<VoxelMesh>& mesh, const glm::mat4& transform);
-		void SubmitMesh(const Ref<VoxelMesh>& mesh, const glm::mat4& transform, const uint32_t* keyFrames);
+		bool SubmitMesh(const Ref<VoxelMesh>& mesh, const glm::mat4& transform, const uint32_t* keyFrames);
 
 		void SubmitEffect(const Ref<MaterialAsset>& material, const glm::ivec3& workGroups, const PushConstBuffer& constants);
 

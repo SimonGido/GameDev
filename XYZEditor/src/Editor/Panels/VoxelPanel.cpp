@@ -270,10 +270,11 @@ namespace XYZ {
 					//	m_ProceduralMesh->SetVoxelColor(0, 256, y, 256, RandomNumber(5u, 255u));
 					//}
 				}
-				//m_World.Update(m_EditorCamera.GetPosition());
-				m_World.Update(glm::vec3(0));
-				int counter = 0;
-				bool newMeshAllocated = false;
+				m_World.Update(m_EditorCamera.GetPosition());
+				//m_World.Update(glm::vec3(0));
+
+				std::vector<Ref<VoxelMesh>> newMeshes;
+				std::vector<Ref<VoxelMesh>> oldMeshes;
 				for (const auto& chunkRow : *m_World.GetActiveChunks())
 				{
 					for (const auto& chunk : chunkRow)
@@ -283,31 +284,24 @@ namespace XYZ {
 							bool compressed = true;
 							for (auto& submesh : chunk.Mesh->GetSubmeshes())
 								compressed &= submesh.Compressed;
-							bool submited = m_VoxelRenderer->SubmitMesh(chunk.Mesh, glm::mat4(1.0f));
-							//if (compressed)
-							//{
-							//	if (newMeshAllocated)
-							//		continue;
-							//
-							//	bool isMeshAllocated = m_VoxelRenderer->IsMeshAllocated(chunk.Mesh);
-							//	bool submited = m_VoxelRenderer->SubmitMesh(chunk.Mesh, glm::mat4(1.0f));
-							//	if (submited && !isMeshAllocated)
-							//	{
-							//		newMeshAllocated = true;
-							//	}
-							//}
-							counter++;
-
-							//if (counter == 2)
-							//	break;
+							if (compressed)
+							{
+								if (!m_VoxelRenderer->IsMeshAllocated(chunk.Mesh))
+									newMeshes.push_back(chunk.Mesh);
+								else
+									oldMeshes.push_back(chunk.Mesh);
+							}
 						}
-						//if (counter == 2)
-						//	break;
 					}
-					//if (counter == 2)
-					//	break;
 				}
-				
+				for (const auto& mesh : oldMeshes)
+					m_VoxelRenderer->SubmitMesh(mesh, glm::mat4(1.0f));
+
+				for (const auto& mesh : newMeshes)
+				{
+					if (m_VoxelRenderer->SubmitMesh(mesh, glm::mat4(1.0f)))
+						break;
+				}
 				for (auto& transform : m_TreeTransforms)
 				{
 					//m_VoxelRenderer->SubmitMesh(m_TreeMesh, transform.GetLocalTransform());
@@ -320,8 +314,8 @@ namespace XYZ {
 				
 					m_VoxelRenderer->SubmitMesh(m_CastleMesh, castleTransform);
 					break;
-					//m_VoxelRenderer->SubmitMesh(m_KnightMesh, knightTransform);
-					//m_VoxelRenderer->SubmitMesh(m_DeerMesh, deerTransform, &m_DeerKeyFrame);
+					m_VoxelRenderer->SubmitMesh(m_KnightMesh, knightTransform);
+					m_VoxelRenderer->SubmitMesh(m_DeerMesh, deerTransform, &m_DeerKeyFrame);
 				}
 				
 				submitWater();

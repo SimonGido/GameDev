@@ -235,9 +235,12 @@ namespace XYZ {
 		
 		if (!DataPool.Empty())
 			submesh.ColorIndices = DataPool.PopBack();
+		if (!DataPool.Empty())
+			waterSubmesh.ColorIndices = DataPool.PopBack();
 
 		submesh.ColorIndices.resize(submesh.Width * submesh.Height * submesh.Depth, 0);
 		waterSubmesh.ColorIndices.resize(waterSubmesh.Width * waterSubmesh.Height * waterSubmesh.Depth, 0);
+
 		for (uint32_t x = 0; x < submesh.Width; ++x)
 		{
 			for (uint32_t z = 0; z < submesh.Depth; ++z)
@@ -256,7 +259,7 @@ namespace XYZ {
 					submesh.ColorIndices[index] = 1; // Grass
 				}
 
-				for (uint32_t y = genHeight; y < waterSubmesh.Height / 2; y++)
+				for (uint32_t y = genHeight; y < submesh.Height / 2; y++)
 				{
 					if (cancel)
 						return chunk;
@@ -267,9 +270,9 @@ namespace XYZ {
 			}
 		}
 		submesh.Compress(16, cancel);
-		//waterSubmesh.Compress(16);
+
 		chunk.Mesh->SetSubmeshes({ submesh});
-		chunk.Mesh->SetInstances({ instance });
+		chunk.Mesh->SetInstances({ instance});
 
 		return chunk;
 	}	

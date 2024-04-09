@@ -65,7 +65,8 @@ namespace XYZ {
 					const uint32_t index = Index3D(x, y, z, voxModel->size_x, voxModel->size_y);
 					submesh.ColorIndices[index] = voxModel->voxel_data[index];
 					const uint8_t colorIndex = submesh.ColorIndices[index];
-					if (colorPallete[colorIndex].A < 255)
+					const auto& color = colorPallete[colorIndex];
+					if (color.A < 255 && color.A > 0)
 						submesh.IsOpaque = false;
 				}
 			}
