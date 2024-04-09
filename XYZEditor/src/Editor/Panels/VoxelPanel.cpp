@@ -270,8 +270,8 @@ namespace XYZ {
 					//	m_ProceduralMesh->SetVoxelColor(0, 256, y, 256, RandomNumber(5u, 255u));
 					//}
 				}
-				m_World.Update(m_EditorCamera.GetPosition());
-				//m_World.Update(glm::vec3(0));
+				//m_World.Update(m_EditorCamera.GetPosition());
+				m_World.Update(glm::vec3(0));
 
 				std::vector<Ref<VoxelMesh>> newMeshes;
 				std::vector<Ref<VoxelMesh>> oldMeshes;
@@ -296,7 +296,7 @@ namespace XYZ {
 				}
 				for (const auto& mesh : oldMeshes)
 					m_VoxelRenderer->SubmitMesh(mesh, glm::mat4(1.0f));
-
+				
 				for (const auto& mesh : newMeshes)
 				{
 					if (m_VoxelRenderer->SubmitMesh(mesh, glm::mat4(1.0f)))

@@ -634,11 +634,12 @@ void RaycastBVH(in Ray cameraRay)
 		uint nodeIndex = stack[stackIndex];
 		VoxelModelBVHNode node = Nodes[nodeIndex];
 
-		if (RayAABBOverlap(cameraRay.Origin, cameraRay.Direction, node.Min.xyz, node.Max.xyz))
+		if (node.Data != -1)
+		{
+			modelDrawn[node.Data] = true;
+		}
+		else if (RayAABBOverlap(cameraRay.Origin, cameraRay.Direction, node.Min.xyz, node.Max.xyz))
 		{		
-			if (node.Data != -1)
-				modelDrawn[node.Data] = true;
-
 			if (node.Left != -1 && node.Right != -1)
 			{
 				stack[stackIndex++] = node.Left;

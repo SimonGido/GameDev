@@ -16,7 +16,7 @@ namespace XYZ {
 	float AABB::CalculateArea() const
 	{
 		const glm::vec3 diff = Max - Min;
-		return 2.0f * (diff.x * diff.y * diff.z + diff.z * diff.x);
+		return 2.0f * (diff.x * diff.y + diff.y * diff.z + diff.z * diff.x);
 	}
 
 	float AABB::CalculateVolume() const
