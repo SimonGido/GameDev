@@ -255,7 +255,7 @@ namespace XYZ {
 		m_Nodes[0].Left = construct(0, 1, constructData, 0, leftCount);
 		m_Nodes[0].Right = construct(0, 1, constructData, leftCount, constructData.size());
 	}
-	void BVH::Traverse(const std::function<void(const BVHNode&, bool)>& action) const
+	void BVH::Traverse(const std::function<void(const BVHNode&)>& action) const
 	{
 		std::stack<int32_t> nodeIndices;
 		nodeIndices.push(0);
@@ -268,12 +268,12 @@ namespace XYZ {
 			auto& node = m_Nodes[nodeIndex];
 			if (node.Left != BVHNode::Invalid)
 			{
-				action(m_Nodes[node.Left], true);
+				action(m_Nodes[node.Left]);
 				nodeIndices.push(node.Left);
 			}
 			if (node.Right != BVHNode::Invalid)
 			{
-				action(m_Nodes[node.Right], false);
+				action(m_Nodes[node.Right]);
 				nodeIndices.push(node.Right);
 			}
 		}
@@ -323,7 +323,7 @@ namespace XYZ {
 				return a.AABB.Min.y < b.AABB.Min.y;
 			return a.AABB.Min.z < b.AABB.Min.z;
 		});
-
+		//size_t mid = start + (end - start) / 2;
 		m_Nodes[result].Left = construct(result, depth + 1, constructData, start, start + leftCount);
 		m_Nodes[result].Right = construct(result, depth + 1, constructData, start + leftCount, end);
 		return result;

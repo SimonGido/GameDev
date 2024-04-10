@@ -239,7 +239,7 @@ namespace XYZ {
 				const double xDouble = static_cast<double>(x) + chunk.X * sc_ChunkDimensions.x;
 				const double zDouble = static_cast<double>(z) + chunk.Z * sc_ChunkDimensions.z;
 				const double val = Perlin::Octave2D(xDouble * fx, zDouble * fz, biom.Octaves);
-				const uint32_t genHeight = val * submesh.Height;
+				const uint32_t genHeight = val * submesh.Height / 4;
 
 				for (uint32_t y = 0; y < genHeight; y++)
 				{
@@ -250,7 +250,7 @@ namespace XYZ {
 					submesh.ColorIndices[index] = 1; // Grass
 				}
 
-				for (uint32_t y = genHeight; y < submesh.Height / 2; y++)
+				for (uint32_t y = genHeight; y < submesh.Height / 6; y++)
 				{
 					if (cancel)
 						return chunk;

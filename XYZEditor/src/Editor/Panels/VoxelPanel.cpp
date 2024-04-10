@@ -154,8 +154,9 @@ namespace XYZ {
 			float zOffset = -160;
 			for (uint32_t i = 0; i < count; ++i)
 			{
-				m_Transforms[i].GetTransform().Translation.x = xOffset;
-				m_Transforms[i].GetTransform().Translation.z = zOffset;
+				m_Transforms[i].GetTransform().Translation.x = RandomNumber(-1200.0f, 1200.0f);
+				m_Transforms[i].GetTransform().Translation.y = RandomNumber(5.0f, 300.0f);
+				m_Transforms[i].GetTransform().Translation.z = RandomNumber(-1200.0f, 1200.0f);
 				m_Transforms[i].GetTransform().Rotation.x = glm::radians(-90.0f);
 				xOffset += 30.0f;
 			}

@@ -266,40 +266,25 @@ namespace XYZ {
 	}
 	void VoxelRendererDebug::ShowBVH(const BVH& bvh, int32_t depth)
 	{	
-
-		bvh.Traverse([this, depth](const auto& node, bool left) {
-
-			if (left)
+		for (const auto& node : bvh.GetNodes())
+		{
+			while (node.Depth >= m_RandomBVHColors.size())
+				m_RandomBVHColors.push_back(Utils::RandomColor());
+		
+			if (depth == -1)
 			{
-				while (node.Depth >= m_RandomBVHColors.size())
-					m_RandomBVHColors.push_back(Utils::RandomColor());
-
-				if (node.Depth == depth)
+				submitAABB(node.AABB.Min, node.AABB.Max, m_RandomBVHColors[node.Depth]);
+			}
+			else if (depth == -2)
+			{
+				if (node.Data != BVHNode::Invalid)
 					submitAABB(node.AABB.Min, node.AABB.Max, m_RandomBVHColors[node.Depth]);
 			}
-
-		});
-
-
-		//for (const auto& node : bvh.GetNodes())
-		//{
-		//	while (node.Depth >= m_RandomBVHColors.size())
-		//		m_RandomBVHColors.push_back(Utils::RandomColor());
-		//
-		//	if (depth == -1)
-		//	{
-		//		submitAABB(node.AABB.Min, node.AABB.Max, m_RandomBVHColors[node.Depth]);
-		//	}
-		//	else if (depth == -2)
-		//	{
-		//		if (node.Data != BVHNode::Invalid)
-		//			submitAABB(node.AABB.Min, node.AABB.Max, m_RandomBVHColors[node.Depth]);
-		//	}
-		//	else if (node.Depth == depth)
-		//	{				
-		//		submitAABB(node.AABB.Min, node.AABB.Max, m_RandomBVHColors[node.Depth]);
-		//	}
-		//}
+			else if (node.Depth == depth)
+			{				
+				submitAABB(node.AABB.Min, node.AABB.Max, m_RandomBVHColors[node.Depth]);
+			}
+		}
 	}
 	void VoxelRendererDebug::ShowAABBGrid(const AABBGrid& grid)
 	{

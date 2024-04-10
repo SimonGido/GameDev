@@ -628,6 +628,7 @@ void RaycastBVH(in Ray cameraRay)
 		modelDrawn[i] = false;
 
 	int hitCount = 0;
+	int maxHitIndex = -1;
 	while (stackIndex > 0)
 	{
 		stackIndex--;
@@ -636,20 +637,20 @@ void RaycastBVH(in Ray cameraRay)
 
 		if (node.Data != -1)
 		{
+			maxHitIndex = max(maxHitIndex, node.Data);
 			modelDrawn[node.Data] = true;
 		}
 		else if (RayAABBOverlap(cameraRay.Origin, cameraRay.Direction, node.Min.xyz, node.Max.xyz))
 		{		
 			if (node.Left != -1)
+			{	
 				stack[stackIndex++] = node.Left;
-
-			if (node.Right != -1)
 				stack[stackIndex++] = node.Right;
-
+			}
 			hitCount++;
 		}
 	}
-	for (int i = 0; i < NumModels; i++)
+	for (int i = 0; i <= maxHitIndex; i++)
 	{
 		if (modelDrawn[i])
 		{
@@ -660,9 +661,15 @@ void RaycastBVH(in Ray cameraRay)
 	}
 	if (u_Uniforms.ShowBVH)
 	{
-		vec3 gradient = GetGradient(hitCount) * 0.1;
+		vec3 gradient = GetGradient(hitCount / 5) * 0.3;
 		vec4 origColor = imageLoad(o_Image, textureIndex);
 		origColor.rgb += gradient;
+
+		//if (hitCount > 90)
+		//	gradient.rgb = vec3(1.0, 0.0, 0.0);
+		//else
+		//	gradient.rgb = vec3(0.0, 0.0, 1.0);
+
 		imageStore(o_Image, textureIndex, vec4(gradient.rgb, origColor.a));		
 	}
 }
@@ -729,8 +736,8 @@ void RaycastModelGrid(in Ray cameraRay, bool opaque)
 				if (modelDrawn[modelIndex])
 					continue;
 				VoxelModel model = Models[modelIndex];
-				if (model.Opaque != opaque)
-					continue;
+				//if (model.Opaque != opaque)
+				//	continue;
 
 				DrawModel(cameraRay, model, lastDrawDistance);
 				modelDrawn[modelIndex] = true;

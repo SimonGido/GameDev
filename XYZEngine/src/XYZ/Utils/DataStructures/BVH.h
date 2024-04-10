@@ -30,7 +30,7 @@ namespace XYZ {
 		void ConstructTest(std::vector<BVHConstructData>& constructData);
 		void Clear() { m_Nodes.clear(); }
 
-		void Traverse(const std::function<void(const BVHNode&, bool)>& action) const;
+		void Traverse(const std::function<void(const BVHNode&)>& action) const;
 
 		const std::vector<BVHNode>& GetNodes() const { return m_Nodes; }
 	private:
