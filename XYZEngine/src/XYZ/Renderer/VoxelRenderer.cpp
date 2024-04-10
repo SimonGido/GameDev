@@ -777,7 +777,7 @@ namespace XYZ {
 				data.AABB = model->BoundingBox;
 				data.Data = model->ModelIndex;
 			}
-			m_ModelsBVH.Construct(constructData);
+			m_ModelsBVH.ConstructTest(constructData);
 		}
 		if (m_UseAABBGrid)
 		{

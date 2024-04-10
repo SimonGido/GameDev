@@ -4,11 +4,22 @@
 #include "Renderer.h"
 #include "XYZ/Asset/Renderer/VoxelMeshSource.h"
 #include "XYZ/Utils/Math/Math.h"
+#include "XYZ/Utils/Random.h"
 
 namespace XYZ {
 	namespace Utils {
 
 		static const float EPSILON = 0.01f;
+
+		static glm::vec4 RandomColor()
+		{
+			return {
+				RandomNumber(0.0f, 1.0f),
+				RandomNumber(0.0f, 1.0f),
+				RandomNumber(0.0f, 1.0f),
+				1.0f
+			};
+		}
 
 		static int CalculateNumberOfSteps(const Ray& ray, float tMin, float tMax, float voxelSize)
 		{
@@ -251,23 +262,44 @@ namespace XYZ {
 				ray.Origin + ray.Direction * distanceTraveled,
 				glm::vec4(1.0f, 0.0f, 1.0f, 1.0f)
 				});
-			//submitRay(resolvedRay, 3.0f, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
 		}
 	}
 	void VoxelRendererDebug::ShowBVH(const BVH& bvh, int32_t depth)
-	{
-		
-		for (const auto& node : bvh.GetNodes())
-		{
-			if (depth == -1)
+	{	
+
+		bvh.Traverse([this, depth](const auto& node, bool left) {
+
+			if (left)
 			{
-				submitAABB(node.AABB.Min, node.AABB.Max, c_BoundingBoxColor);
+				while (node.Depth >= m_RandomBVHColors.size())
+					m_RandomBVHColors.push_back(Utils::RandomColor());
+
+				if (node.Depth == depth)
+					submitAABB(node.AABB.Min, node.AABB.Max, m_RandomBVHColors[node.Depth]);
 			}
-			else if (node.Depth == depth)
-			{
-				submitAABB(node.AABB.Min, node.AABB.Max, c_BoundingBoxColor);
-			}
-		}
+
+		});
+
+
+		//for (const auto& node : bvh.GetNodes())
+		//{
+		//	while (node.Depth >= m_RandomBVHColors.size())
+		//		m_RandomBVHColors.push_back(Utils::RandomColor());
+		//
+		//	if (depth == -1)
+		//	{
+		//		submitAABB(node.AABB.Min, node.AABB.Max, m_RandomBVHColors[node.Depth]);
+		//	}
+		//	else if (depth == -2)
+		//	{
+		//		if (node.Data != BVHNode::Invalid)
+		//			submitAABB(node.AABB.Min, node.AABB.Max, m_RandomBVHColors[node.Depth]);
+		//	}
+		//	else if (node.Depth == depth)
+		//	{				
+		//		submitAABB(node.AABB.Min, node.AABB.Max, m_RandomBVHColors[node.Depth]);
+		//	}
+		//}
 	}
 	void VoxelRendererDebug::ShowAABBGrid(const AABBGrid& grid)
 	{

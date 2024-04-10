@@ -32,6 +32,7 @@ namespace XYZ {
 
 		glm::vec3 ClosestPoint(const glm::vec3& startPoint) const;
 		float Distance(const glm::vec3& point) const;
+		int GetLongestAxis() const;
 
 		AABB TransformAABB(const glm::mat4& transform) const;
 

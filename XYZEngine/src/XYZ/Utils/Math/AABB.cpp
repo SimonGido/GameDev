@@ -149,6 +149,18 @@ namespace XYZ {
 		return std::sqrt(dx * dx + dy * dy + dz * dz);
 	}
 
+	int AABB::GetLongestAxis() const
+	{
+		auto diff = Max - Min;
+
+		if (diff.x > diff.y && diff.x > diff.z)
+			return 0;
+		else if (diff.y > diff.z)
+			return 1;
+		else 
+			return 2;
+	}
+
 	AABB AABB::TransformAABB(const glm::mat4& transform) const
 	{
 		glm::vec4 corners[8] = {

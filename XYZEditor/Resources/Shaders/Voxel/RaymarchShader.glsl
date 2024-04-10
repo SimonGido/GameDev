@@ -610,7 +610,7 @@ void RaycastBVH(in Ray cameraRay)
 	if (NodeCount == 0)
 		return;
 
-	VoxelModelBVHNode root = Nodes[NodeCount - 1];
+	VoxelModelBVHNode root = Nodes[0];
 
 	float tMin = 0.0;
 	float tMax = 0.0;
@@ -619,7 +619,7 @@ void RaycastBVH(in Ray cameraRay)
 
 	int stackIndex = 0;
 	uint stack[STACK_MAX];
-	stack[stackIndex++] = NodeCount - 1; // Start with the root node
+	stack[stackIndex++] = 0; // Start with the root node
 
 	ivec2 textureIndex = ivec2(gl_GlobalInvocationID.xy);
 
@@ -640,11 +640,12 @@ void RaycastBVH(in Ray cameraRay)
 		}
 		else if (RayAABBOverlap(cameraRay.Origin, cameraRay.Direction, node.Min.xyz, node.Max.xyz))
 		{		
-			if (node.Left != -1 && node.Right != -1)
-			{
+			if (node.Left != -1)
 				stack[stackIndex++] = node.Left;
+
+			if (node.Right != -1)
 				stack[stackIndex++] = node.Right;
-			}
+
 			hitCount++;
 		}
 	}

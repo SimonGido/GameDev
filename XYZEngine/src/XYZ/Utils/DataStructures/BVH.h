@@ -27,12 +27,14 @@ namespace XYZ {
 	{
 	public:
 		void Construct(const std::vector<BVHConstructData>& constructData);
-
+		void ConstructTest(std::vector<BVHConstructData>& constructData);
 		void Clear() { m_Nodes.clear(); }
+
+		void Traverse(const std::function<void(const BVHNode&, bool)>& action) const;
 
 		const std::vector<BVHNode>& GetNodes() const { return m_Nodes; }
 	private:
-	
+		int32_t construct(int32_t parent, int32_t depth, std::vector<BVHConstructData>& constructData, size_t start, size_t end);
 	private:
 		std::vector<BVHNode> m_Nodes;
 	};

@@ -108,7 +108,10 @@ namespace XYZ {
 		};
 		std::vector<Line> m_DebugLines;
 
+		std::vector<glm::vec4> m_RandomBVHColors;
+
 		const glm::vec4 c_BoundingBoxColor;
+
 	};
 
 }
