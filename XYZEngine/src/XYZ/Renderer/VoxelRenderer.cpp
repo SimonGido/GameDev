@@ -35,6 +35,8 @@ namespace XYZ {
 
 
 	VoxelRenderer::VoxelRenderer()
+		:
+		m_ModelsOctree(AABB(glm::vec3(-2048, -256, -2048), glm::vec3(2048)), 5)
 	{
 		m_CommandBuffer = PrimaryRenderCommandBuffer::Create(0, "VoxelRenderer");
 		m_CommandBuffer->CreateTimestampQueries(GPUTimeQueries::Count());
@@ -51,6 +53,7 @@ namespace XYZ {
 		m_StorageBufferSet->Create(SSBOVoxelComputeData::MaxSize, SSBOVoxelComputeData::Set, SSBOVoxelComputeData::Binding, false, true);
 		m_StorageBufferSet->Create(sizeof(SSBOBVH), SSBOBVH::Set, SSBOBVH::Binding);
 		m_StorageBufferSet->Create(sizeof(SSBOModelGrid), SSBOModelGrid::Set, SSBOModelGrid::Binding);
+		m_StorageBufferSet->Create(sizeof(SSBOOCtree), SSBOOCtree::Set, SSBOOCtree::Binding);
 
 		m_VoxelStorageAllocator = Ref<StorageBufferAllocator>::Create(SSBOVoxels::MaxVoxels, SSBOVoxels::Binding, SSBOVoxels::Set);
 		m_ColorStorageAllocator = Ref<StorageBufferAllocator>::Create(SSBOColors::MaxSize, SSBOColors::Binding, SSBOColors::Set);
@@ -95,6 +98,7 @@ namespace XYZ {
 		updateViewportSize();
 		updateUniformBufferSet();
 		m_ModelsBVH.Clear();
+		m_ModelsOctree.Clear();
 	}
 	void VoxelRenderer::EndScene()
 	{
@@ -296,6 +300,7 @@ namespace XYZ {
 			ImGui::Checkbox("SSGI Noise", (bool*)&m_SSGIValues.Noise);
 			ImGui::NewLine();
 
+			ImGui::Checkbox("Octree", &m_UseOctree);
 			ImGui::Checkbox("AABB Grid", &m_UseAABBGrid);
 			ImGui::Checkbox("BVH", &m_UseBVH);
 			ImGui::Checkbox("Show BVH", &m_ShowBVH);
@@ -350,7 +355,6 @@ namespace XYZ {
 		XYZ_PROFILE_FUNC("VoxelRenderer::updateBVHSSBO");
 		// Update octree
 		uint32_t nodeCount = 0;
-		const glm::vec3 cameraPosition(glm::vec3(m_UBVoxelScene.CameraPosition));
 		for (auto& bvhNode : m_ModelsBVH.GetNodes())
 		{
 			auto& node = m_SSBOBVH.Nodes[nodeCount];
@@ -416,6 +420,45 @@ namespace XYZ {
 		m_StorageBufferSet->Update(&m_SSBOModelGrid, firstUpdateSize, 0, SSBOModelGrid::Binding, SSBOModelGrid::Set);
 		void* secondUpdateData = &reinterpret_cast<uint8_t*>(&m_SSBOModelGrid)[secondUpdateOffset];
 		m_StorageBufferSet->Update(secondUpdateData, secondUpdateSize, secondUpdateOffset, SSBOModelGrid::Binding, SSBOModelGrid::Set);
+	}
+
+	void VoxelRenderer::updateOctreeSSBO()
+	{
+		XYZ_PROFILE_FUNC("VoxelRenderer::updateOctreeSSBO");
+		// Update octree
+		uint32_t nodeCount = 0;
+		uint32_t dataCount = 0;
+		for (auto& octreeNode : m_ModelsOctree.GetNodes())
+		{
+			auto& node = m_SSBOOctree.Nodes[nodeCount];
+			memcpy(node.Children, octreeNode.Children, 8 * sizeof(uint32_t));
+			node.IsLeaf = octreeNode.IsLeaf;
+			node.Max = glm::vec4(octreeNode.BoundingBox.Max, 1.0f);
+			node.Min = glm::vec4(octreeNode.BoundingBox.Min, 1.0f);
+			node.DataStart = dataCount;
+			for (const auto& data : octreeNode.Data)
+			{
+				m_SSBOOctree.ModelIndices[dataCount++] = data.Data;
+			}
+			node.DataEnd = dataCount;
+			nodeCount++;
+		}
+		m_SSBOOctree.NodeCount = nodeCount;
+
+		const uint32_t firstUpdateSize =
+			sizeof(SSBOOCtree::NodeCount)
+			+ sizeof(SSBOOCtree::Padding)
+			+ sizeof(VoxelModelOctreeNode) * nodeCount;
+
+		const uint32_t secondUpdateSize = sizeof(uint32_t) * dataCount;
+		const uint32_t secondUpdateOffset =
+			sizeof(SSBOOCtree::NodeCount)
+			+ sizeof(SSBOOCtree::Padding)
+			+ sizeof(SSBOOCtree::Nodes);
+
+		m_StorageBufferSet->Update(&m_SSBOOctree, firstUpdateSize, 0, SSBOOCtree::Binding, SSBOOCtree::Set);
+		void* secondUpdateData = &reinterpret_cast<uint8_t*>(&m_SSBOOctree)[secondUpdateOffset];
+		m_StorageBufferSet->Update(secondUpdateData, secondUpdateSize, secondUpdateOffset, SSBOOCtree::Binding, SSBOOCtree::Set);
 	}
 
 	bool VoxelRenderer::submitSubmesh(const Ref<VoxelMesh>& mesh, const VoxelSubmesh& submesh, const glm::mat4& transform, uint32_t submeshIndex)
@@ -549,6 +592,7 @@ namespace XYZ {
 			m_RaymarchMaterial
 		);
 
+		Bool32 useOctree = m_UseOctree;
 		Bool32 useModelGrid = m_UseAABBGrid;
 		Bool32 useBVH = m_UseBVH;
 		Bool32 showBVH = m_ShowBVH;
@@ -559,7 +603,7 @@ namespace XYZ {
 			m_RaymarchPipeline,
 			nullptr,
 			m_WorkGroups.x, m_WorkGroups.y, 1,
-			PushConstBuffer{ useModelGrid, useBVH,  showBVH, showDepth, showNormals }
+			PushConstBuffer{ useOctree, useModelGrid, useBVH,  showBVH, showDepth, showNormals }
 		);
 
 
@@ -606,6 +650,8 @@ namespace XYZ {
 			m_DebugRenderer->ShowAABBGrid(m_ModelsGrid);
 		if (m_UseBVH)
 			m_DebugRenderer->ShowBVH(m_ModelsBVH, m_ShowBVHDepth);
+		if (m_UseOctree)
+			m_DebugRenderer->ShowOctree(m_ModelsOctree);
 		//for (const auto& model : m_RenderModels)
 		//{
 		//	if (m_DebugOpaque)
@@ -767,6 +813,17 @@ namespace XYZ {
 			allocation.Models.push_back(model);
 			modelIndex++;
 		}
+		if (m_UseOctree)
+		{
+			AABB sceneAABB(glm::vec3(FLT_MAX), glm::vec3(FLT_MIN));
+			for (auto model : m_RenderModelsSorted)
+				sceneAABB.Union(model->BoundingBox);
+
+			sceneAABB.Max.y *= 3;
+			m_ModelsOctree.Initialize(sceneAABB, 5);
+			for (auto model : m_RenderModelsSorted)
+				m_ModelsOctree.InsertData(model->BoundingBox, model->ModelIndex);
+		}
 		
 		if (m_UseBVH)
 		{
@@ -835,6 +892,8 @@ namespace XYZ {
 			updateBVHSSBO();
 		if (m_UseAABBGrid)
 			updateModelGridSSBO();
+		if (m_UseOctree)
+			updateOctreeSSBO();
 	}
 	
 	void VoxelRenderer::createDefaultPipelines()

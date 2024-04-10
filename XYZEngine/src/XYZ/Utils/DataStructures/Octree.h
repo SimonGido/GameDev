@@ -27,6 +27,7 @@ namespace XYZ {
 	public:
 		Octree(const AABB& aabb, uint32_t maxDepth);
 
+		void Initialize(const AABB& aabb, uint32_t maxDepth);
 		void InsertData(const AABB& aabb, int32_t data);
 		bool TryInsert(const AABB& aabb, int32_t data, const Math::Frustum& frustum);
 

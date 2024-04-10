@@ -12,12 +12,15 @@
 #define MULTI_COLOR 256
 #define STACK_MAX 256
 #define MODEL_GRID_MAX_CELLS 10 * 3 * 10
+#define MAX_NODES 16384
+#define MAX_DEPTH 5
 
 const float EPSILON = 0.01;
 const uint OPAQUE = 255;
 
 layout(push_constant) uniform Uniforms
 {
+	bool UseOctree;
 	bool UseModelGrid;
 	bool UseBVH;
 	bool ShowBVH;
@@ -37,6 +40,21 @@ struct AABB
 	vec3 Min;
 	vec3 Max;
 };
+
+struct VoxelModelOctreeNode
+{
+	vec4 Min;
+	vec4 Max;
+
+	int  Children[8];
+	
+	bool IsLeaf;
+	int  DataStart;
+	int  DataEnd;
+
+	uint Padding;
+};
+
 
 
 struct VoxelModelBVHNode
@@ -133,7 +151,13 @@ layout(std430, binding = 26) readonly buffer buffer_ModelGrid
 	uint	GridModelIndices[];
 };
 
-
+layout(std430, binding = 28) readonly buffer buffer_Octree
+{		
+	uint OctreeNodeCount;
+	uint OctreePadding[3];
+	VoxelModelOctreeNode OctreeNodes[MAX_NODES];
+	uint OctreeModelIndices[MAX_MODELS];
+};
 
 layout(binding = 21, rgba32f) uniform image2D o_Image;
 layout(binding = 22, r32f) uniform image2D o_DepthImage;
@@ -664,15 +688,74 @@ void RaycastBVH(in Ray cameraRay)
 		vec3 gradient = GetGradient(hitCount / 5) * 0.3;
 		vec4 origColor = imageLoad(o_Image, textureIndex);
 		origColor.rgb += gradient;
-
-		//if (hitCount > 90)
-		//	gradient.rgb = vec3(1.0, 0.0, 0.0);
-		//else
-		//	gradient.rgb = vec3(0.0, 0.0, 1.0);
-
 		imageStore(o_Image, textureIndex, vec4(gradient.rgb, origColor.a));		
 	}
 }
+
+void RaycastOctree(in Ray ray)
+{
+	ivec2 textureIndex = ivec2(gl_GlobalInvocationID.xy);
+
+	bool modelDrawn[MAX_MODELS];
+	for (int i = 0; i < NumModels; i++)
+		modelDrawn[i] = false;
+
+	int maxModelHit = -1;
+	int stack[MAX_DEPTH * 5];
+	int stackIndex = 0;
+	stack[stackIndex++] = 0; // Start with the root node
+	int hitCount = 0;
+	while (stackIndex > 0)
+	{
+		stackIndex--;
+		int nodeIndex = stack[stackIndex];
+		VoxelModelOctreeNode node = OctreeNodes[nodeIndex];
+			
+		for (int i = node.DataStart; i < node.DataEnd; i++)
+		{
+			float drawDistance;
+			uint modelIndex = OctreeModelIndices[i];
+			modelDrawn[modelIndex] = true;
+			maxModelHit = max(maxModelHit, int(modelIndex));
+		}
+
+		if (!node.IsLeaf)
+		{
+			for (int c = 0; c < 8; c++)
+			{
+				VoxelModelOctreeNode child = OctreeNodes[node.Children[c]];
+				if (child.DataEnd - child.DataStart == 0 && child.IsLeaf)
+					continue;
+
+				float tMin = 0.0;
+				float tMax = 0.0;
+				if (RayBoxIntersectionInside(ray.Origin, ray.Direction, child.Min.xyz, child.Max.xyz, tMin, tMax))
+				{
+					stack[stackIndex++] = node.Children[c];
+					hitCount++;
+				}
+			}
+		}
+	}
+	for (int i = 0; i <= maxModelHit; i++)
+	{
+		if (modelDrawn[i])
+		{
+			float drawDistance = FLT_MAX;
+			VoxelModel model = Models[i];
+			DrawModel(ray, model, drawDistance);
+		}
+	}
+
+	if (u_Uniforms.ShowBVH)
+	{
+		vec3 gradient = GetGradient(hitCount) * 0.3;
+		vec4 origColor = imageLoad(o_Image, textureIndex);
+		origColor.rgb += gradient;
+		imageStore(o_Image, textureIndex, vec4(gradient.rgb, origColor.a));		
+	}
+}
+
 
 void RaycastModelGrid(in Ray cameraRay, bool opaque)
 {
@@ -777,6 +860,10 @@ void main()
 	{
 		RaycastModelGrid(cameraRay, true);
 		//RaycastModelGrid(cameraRay, false);
+	}
+	else if (u_Uniforms.UseOctree)
+	{
+		RaycastOctree(cameraRay);
 	}
 	else
 	{

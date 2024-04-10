@@ -155,7 +155,7 @@ namespace XYZ {
 			for (uint32_t i = 0; i < count; ++i)
 			{
 				m_Transforms[i].GetTransform().Translation.x = RandomNumber(-1200.0f, 1200.0f);
-				m_Transforms[i].GetTransform().Translation.y = RandomNumber(5.0f, 300.0f);
+				m_Transforms[i].GetTransform().Translation.y = RandomNumber(5.0f, 30.0f);
 				m_Transforms[i].GetTransform().Translation.z = RandomNumber(-1200.0f, 1200.0f);
 				m_Transforms[i].GetTransform().Rotation.x = glm::radians(-90.0f);
 				xOffset += 30.0f;
@@ -313,9 +313,9 @@ namespace XYZ {
 					const glm::mat4 knightTransform = m_Transforms[i + 1].GetLocalTransform();
 					const glm::mat4 deerTransform = m_Transforms[i + 2].GetLocalTransform();
 				
-					m_VoxelRenderer->SubmitMesh(m_CastleMesh, castleTransform);
-					m_VoxelRenderer->SubmitMesh(m_KnightMesh, knightTransform);
-					m_VoxelRenderer->SubmitMesh(m_DeerMesh, deerTransform, &m_DeerKeyFrame);
+					//m_VoxelRenderer->SubmitMesh(m_CastleMesh, castleTransform);
+					//m_VoxelRenderer->SubmitMesh(m_KnightMesh, knightTransform);
+					//m_VoxelRenderer->SubmitMesh(m_DeerMesh, deerTransform, &m_DeerKeyFrame);
 				}
 				
 				submitWater();

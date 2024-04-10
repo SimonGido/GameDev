@@ -5,6 +5,7 @@
 #include "XYZ/Utils/Math/Ray.h"
 #include "XYZ/Utils/DataStructures/BVH.h"
 #include "XYZ/Utils/DataStructures/AABBGrid.h"
+#include "XYZ/Utils/DataStructures/Octree.h"
 
 namespace XYZ {
 
@@ -52,7 +53,7 @@ namespace XYZ {
 
 		void ShowBVH(const BVH& bvh, int32_t depth);
 		void ShowAABBGrid(const AABBGrid& grid);
-
+		void ShowOctree(const Octree& octree);
 
 		void SetViewportSize(uint32_t width, uint32_t height);
 

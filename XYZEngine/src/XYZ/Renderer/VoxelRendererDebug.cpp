@@ -315,6 +315,17 @@ namespace XYZ {
 		}
 	}
 
+	void VoxelRendererDebug::ShowOctree(const Octree& octree)
+	{
+		for (const auto& node : octree.GetNodes())
+		{
+			while (node.Depth >= m_RandomBVHColors.size())
+				m_RandomBVHColors.push_back(Utils::RandomColor());
+
+			submitAABB(node.BoundingBox.Min, node.BoundingBox.Max, m_RandomBVHColors[node.Depth]);
+		}
+	}
+
 	void VoxelRendererDebug::SetViewportSize(uint32_t width, uint32_t height)
 	{
 		if (m_ViewportSize.x != width || m_ViewportSize.y != height)

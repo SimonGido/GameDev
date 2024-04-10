@@ -29,6 +29,13 @@ namespace XYZ {
 		auto& root = m_Nodes.emplace_back();
 		root.BoundingBox = aabb;
 	}
+	void Octree::Initialize(const AABB& aabb, uint32_t maxDepth)
+	{
+		m_MaxDepth = maxDepth;
+		m_Nodes.clear();
+		auto& root = m_Nodes.emplace_back();
+		root.BoundingBox = aabb;
+	}
 	void Octree::InsertData(const AABB& aabb, int32_t data)
 	{
 		XYZ_PROFILE_FUNC("Octree::InsertData");
