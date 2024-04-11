@@ -287,13 +287,18 @@ namespace XYZ {
 								compressed &= submesh.Compressed;
 							if (compressed)
 							{
+								//m_VoxelRenderer->SubmitMesh(chunk.Mesh, glm::mat4(1.0f));
 								if (!m_VoxelRenderer->IsMeshAllocated(chunk.Mesh))
 									newMeshes.push_back(chunk.Mesh);
 								else
 									oldMeshes.push_back(chunk.Mesh);
+							
 							}
+
 						}
+
 					}
+
 				}
 				for (const auto& mesh : oldMeshes)
 					m_VoxelRenderer->SubmitMesh(mesh, glm::mat4(1.0f));

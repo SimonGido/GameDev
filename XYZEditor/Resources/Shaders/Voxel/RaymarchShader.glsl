@@ -611,18 +611,18 @@ RaymarchResult RaymarchCompressed(in Ray ray, float tMin, in VoxelModel model, v
 				cellModel.VoxelSize		= model.VoxelSize / model.CompressScale;
 
 				RaymarchResult newResult = RayMarchModelCell(ray, state.Distance - EPSILON, cellModel, currentColor, currentDistance, decompressedVoxelOffset, result.Color);				
-				//if (newResult.Hit)
-				//{
-				//	if (result.Hit == false)
-				//	{
-				//		result.Normal = newResult.Normal;
-				//		result.Distance = newResult.Distance;
-				//		result.Hit = true;
-				//	}
-				//	result.Color = newResult.Color;
-				//	if (result.Color.a >= 1.0)
-				//		return result;	
-				//}
+				if (newResult.Hit)
+				{
+					if (result.Hit == false)
+					{
+						result.Normal = newResult.Normal;
+						result.Distance = newResult.Distance;
+						result.Hit = true;
+					}
+					result.Color = newResult.Color;
+					if (result.Color.a >= 1.0)
+						return result;	
+				}
 			}		
 		}
 		PerformStep(state, step, t_delta);
@@ -700,7 +700,7 @@ bool DrawModel(in Ray cameraRay, in VoxelModel model, inout vec4 drawColor, inou
 			result.Color = BlendColors(result.Color, drawColor);
 		
 		StoreHitResult(result, drawDistance);	
-		drawDistance = max(result.Distance, drawDistance); // Take max distance
+		drawDistance = max(result.Distance, drawDistance); // Take max distance ( This is not always the case)
 		drawColor = result.Color; // Our color becomes new last drawColor
 
 		return true;
