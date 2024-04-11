@@ -250,7 +250,7 @@ namespace XYZ {
 					submesh.ColorIndices[index] = 1; // Grass
 				}
 
-				for (uint32_t y = genHeight; y < submesh.Height / 2; y++)
+				for (uint32_t y = genHeight; y < 70; y++)
 				{
 					if (cancel)
 						return chunk;
@@ -260,7 +260,7 @@ namespace XYZ {
 				}
 			}
 		}
-		submesh.Compress(16, cancel, 2); // Do not compress water indices
+		//submesh.Compress(16, cancel, 2); // Do not compress water indices
 
 		chunk.Mesh->SetSubmeshes({ submesh});
 		chunk.Mesh->SetInstances({ instance});

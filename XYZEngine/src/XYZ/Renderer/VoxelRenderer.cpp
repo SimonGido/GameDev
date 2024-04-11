@@ -798,8 +798,8 @@ namespace XYZ {
 				}
 				else 
 				{
-					// Both are transparent, sort by DistanceFromCamera inverse
-					return a->DistanceFromCamera > b->DistanceFromCamera;
+					// Both are transparent, sort by DistanceFromCamera
+					return a->DistanceFromCamera < b->DistanceFromCamera;
 				}
 			});
 		}

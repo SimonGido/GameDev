@@ -282,10 +282,10 @@ namespace XYZ {
 					{
 						if (chunk.Mesh.Raw())
 						{
-							bool compressed = true;
-							for (auto& submesh : chunk.Mesh->GetSubmeshes())
-								compressed &= submesh.Compressed;
-							if (compressed)
+							//bool compressed = true;
+							//for (auto& submesh : chunk.Mesh->GetSubmeshes())
+							//	compressed &= submesh.Compressed;
+							//if (compressed)
 							{
 								if (!m_VoxelRenderer->IsMeshAllocated(chunk.Mesh))
 									newMeshes.push_back(chunk.Mesh);
@@ -313,7 +313,8 @@ namespace XYZ {
 					const glm::mat4 knightTransform = m_Transforms[i + 1].GetLocalTransform();
 					const glm::mat4 deerTransform = m_Transforms[i + 2].GetLocalTransform();
 				
-					//m_VoxelRenderer->SubmitMesh(m_CastleMesh, castleTransform);
+					m_VoxelRenderer->SubmitMesh(m_CastleMesh, castleTransform);
+					break;
 					//m_VoxelRenderer->SubmitMesh(m_KnightMesh, knightTransform);
 					//m_VoxelRenderer->SubmitMesh(m_DeerMesh, deerTransform, &m_DeerKeyFrame);
 				}
