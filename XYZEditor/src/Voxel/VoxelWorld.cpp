@@ -260,7 +260,7 @@ namespace XYZ {
 				}
 			}
 		}
-		//submesh.Compress(16, cancel, 2); // Do not compress water indices
+		submesh.Compress(16, cancel, 2); // Do not compress water indices
 
 		chunk.Mesh->SetSubmeshes({ submesh});
 		chunk.Mesh->SetInstances({ instance});

@@ -282,10 +282,10 @@ namespace XYZ {
 					{
 						if (chunk.Mesh.Raw())
 						{
-							//bool compressed = true;
-							//for (auto& submesh : chunk.Mesh->GetSubmeshes())
-							//	compressed &= submesh.Compressed;
-							//if (compressed)
+							bool compressed = true;
+							for (auto& submesh : chunk.Mesh->GetSubmeshes())
+								compressed &= submesh.Compressed;
+							if (compressed)
 							{
 								if (!m_VoxelRenderer->IsMeshAllocated(chunk.Mesh))
 									newMeshes.push_back(chunk.Mesh);
