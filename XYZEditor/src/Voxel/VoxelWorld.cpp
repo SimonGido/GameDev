@@ -257,7 +257,9 @@ namespace XYZ {
 					submesh.ColorIndices[index] = 1; // Grass
 				}
 
-				for (uint32_t y = genHeight; y < submesh.Height / 2; y++)
+
+				const uint32_t waterHeight = submesh.Height / 2;
+				for (uint32_t y = genHeight; y < waterHeight; y++)
 				{
 					if (cancel)
 						return chunk;
