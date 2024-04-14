@@ -488,6 +488,7 @@ namespace XYZ {
 					{
 						m_VoxelRenderer->SubmitEffect(
 							m_WaterMaterial,
+							true,
 							workGroups,
 							PushConstBuffer
 							{

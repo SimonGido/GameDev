@@ -201,9 +201,10 @@ namespace XYZ {
 		return false;
 	}
 	
-	void VoxelRenderer::SubmitEffect(const Ref<MaterialAsset>& material, const glm::ivec3& workGroups, const PushConstBuffer& constants)
+	void VoxelRenderer::SubmitEffect(const Ref<MaterialAsset>& material, bool isCompute, const glm::ivec3& workGroups, const PushConstBuffer& constants)
 	{
 		auto& effectCommand = m_EffectCommands[material->GetHandle()];
+		effectCommand.IsCompute = isCompute;
 		effectCommand.Material = material;
 		auto& invocation = effectCommand.Invocations.emplace_back();
 		invocation.WorkGroups = workGroups;
@@ -559,6 +560,8 @@ namespace XYZ {
 
 		for (auto& [key, effect] : m_EffectCommands)
 		{
+			
+
 			Ref<PipelineCompute> pipeline = getEffectPipeline(effect.Material);
 			Renderer::BeginPipelineCompute(
 				m_CommandBuffer,
@@ -962,6 +965,26 @@ namespace XYZ {
 
 		Ref<PipelineCompute> result = PipelineCompute::Create(spec);
 		m_EffectPipelines[handle] = result;
+
+		return result;
+	}
+
+	Ref<Pipeline> VoxelRenderer::getEffectPipelineRaster(const Ref<MaterialAsset>& material)
+	{
+		AssetHandle handle = material->GetHandle();
+		auto it = m_EffectPipelinesRaster.find(handle);
+		if (it != m_EffectPipelinesRaster.end())
+			return it->second;
+
+		PipelineSpecification spec;
+		spec.Shader = material->GetShader();
+		spec.Topology = PrimitiveTopology::Triangles;
+		spec.DepthTest = true;
+		spec.DepthWrite = true;
+		spec.BackfaceCulling = true;
+
+		Ref<Pipeline> result = Pipeline::Create(spec);
+		m_EffectPipelinesRaster[handle] = result;
 
 		return result;
 	}

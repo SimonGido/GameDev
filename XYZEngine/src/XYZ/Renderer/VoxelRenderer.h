@@ -217,7 +217,7 @@ namespace XYZ {
 		bool SubmitMesh(const Ref<VoxelMesh>& mesh, const glm::mat4& transform);
 		bool SubmitMesh(const Ref<VoxelMesh>& mesh, const glm::mat4& transform, const uint32_t* keyFrames);
 
-		void SubmitEffect(const Ref<MaterialAsset>& material, const glm::ivec3& workGroups, const PushConstBuffer& constants);
+		void SubmitEffect(const Ref<MaterialAsset>& material, bool isCompute, const glm::ivec3& workGroups, const PushConstBuffer& constants);
 
 		void OnImGuiRender();
 
@@ -255,7 +255,7 @@ namespace XYZ {
 		struct VoxelEffectCommand
 		{
 			Ref<MaterialAsset> Material;
-			
+			bool IsCompute;
 			std::vector<VoxelEffectInvocation> Invocations;
 		};
 
@@ -313,6 +313,7 @@ namespace XYZ {
 
 		void createDefaultPipelines();
 		Ref<PipelineCompute> getEffectPipeline(const Ref<MaterialAsset>& material);
+		Ref<Pipeline> getEffectPipelineRaster(const Ref<MaterialAsset>& material);
 
 		MeshAllocation& createMeshAllocation(const Ref<VoxelMesh>& mesh);	
 
@@ -387,7 +388,7 @@ namespace XYZ {
 		std::unordered_map<AssetHandle, MeshAllocation> m_LastFrameMeshAllocations;
 
 		std::unordered_map<AssetHandle, Ref<PipelineCompute>> m_EffectPipelines;
-
+		std::unordered_map<AssetHandle, Ref<Pipeline>> m_EffectPipelinesRaster;
 	
 		struct GPUTimeQueries
 		{
