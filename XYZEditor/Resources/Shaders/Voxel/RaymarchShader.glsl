@@ -509,7 +509,7 @@ RaymarchResult RaymarchCompressed(in Ray ray, vec4 startColor, float tMin, in Vo
 					}	
 
 					float tMin = state.Distance;
-					float tMax = GetNextDistance(state, step, t_delta);
+					float tMax = min(GetNextDistance(state, step, t_delta), currentDistance);
 					int numSteps = CalculateNumberOfSteps(ray, tMin, tMax, model.VoxelSize / model.CompressScale);
 					vec4 cellColor = VoxelToColor(colorUINT);
 					for (int i = 0; i < numSteps; i++)
@@ -877,7 +877,12 @@ void main()
 			VoxelModel model = Models[i];
 			DrawModel(cameraRay, model, drawDistance);
 		}
-		for (uint i = OpaqueModelCount; i < OpaqueModelCount + TransparentModelCount; i++)
+
+		
+		int transparentStart = int(OpaqueModelCount);
+		int transparentEnd = int(OpaqueModelCount + TransparentModelCount);
+
+		for (uint i = transparentStart; i < transparentEnd; i++)
 		{
 			VoxelModel model = Models[i];
 			DrawModel(cameraRay, model, drawDistance);

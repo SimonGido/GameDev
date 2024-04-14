@@ -265,15 +265,15 @@ namespace XYZ {
 						return chunk;
 
 					const uint32_t index = Index3D(x, y, z, submesh.Width, submesh.Height);
-					waterSubmesh.ColorIndices[index] = 2; // Water
+					submesh.ColorIndices[index] = 2; // Water
 				}
 			}
 		}
 		submesh.Compress(16, cancel, 2); // Do not compress water indices
 		waterSubmesh.Compress(16, cancel);
 
-		chunk.Mesh->SetSubmeshes({ submesh, waterSubmesh });
-		chunk.Mesh->SetInstances({ instance, waterInstance });
+		chunk.Mesh->SetSubmeshes({ submesh });
+		chunk.Mesh->SetInstances({ instance });
 
 		return chunk;
 	}	
