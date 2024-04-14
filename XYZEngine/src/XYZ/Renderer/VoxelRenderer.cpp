@@ -780,7 +780,7 @@ namespace XYZ {
 
 				bool isAOpaque = submeshA.IsOpaque;
 				bool isBOpaque = submeshB.IsOpaque;
-
+				return a->DistanceFromCamera < b->DistanceFromCamera;
 				if (isAOpaque && isBOpaque) 
 				{
 					// Both are opaque, sort by DistanceFromCamera

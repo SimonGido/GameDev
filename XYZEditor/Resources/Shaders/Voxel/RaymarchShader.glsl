@@ -272,6 +272,7 @@ struct RaymarchResult
 	vec3  WorldHit;
 	vec3  WorldNormal;
 	float Distance;
+	float EndDistance;
 	bool  Hit;
 };
 
@@ -427,6 +428,7 @@ RaymarchResult RayMarchModel(in Ray ray, float tMin, in VoxelModel model, vec4 c
 	result.Color	= vec4(0,0,0,0);
 	result.Hit		= false;
 	result.Distance	= 0.0;
+	result.EndDistance = 0.0;
 
 	ivec3 step = ivec3(
 		(ray.Direction.x > 0.0) ? 1 : -1,
@@ -460,15 +462,16 @@ RaymarchResult RayMarchModel(in Ray ray, float tMin, in VoxelModel model, vec4 c
 					result.Hit	 = true;
 				}
 
+				result.EndDistance = result.Distance;
+
 				vec4 voxelColor = VoxelToColor(voxel);
 				vec4 newColor = BlendColors(result.Color, voxelColor);
-
-				if (state.Distance > currentDistance)
-				{
-					vec4 blendedColor = BlendColors(currentColor, newColor);
-					if (blendedColor.a > 1.0)
-						break;
-				}
+				//if (state.Distance > currentDistance)
+				//{
+				//	vec4 blendedColor = BlendColors(currentColor, newColor);
+				//	if (blendedColor.a > 1.0)
+				//		break;
+				//}
 	
 				result.Color = newColor;
 				if (result.Color.a >= 1.0)
@@ -698,7 +701,7 @@ bool DrawModel(in Ray cameraRay, in VoxelModel model, inout vec4 drawColor, inou
 
 
 		StoreHitResult(result, drawDistance);	
-		drawDistance = result.Distance;
+		drawDistance = result.EndDistance;
 		drawColor = result.Color; // Our color becomes new last drawColor
 		return true;
 	}
@@ -963,9 +966,6 @@ void main()
 				{
 					resultColor = BlendColors(resultColor, newColor);
 				}
-
-				//if (resultColor.a >= 1.0)
-				//	break;
 			}	
 		}
 		imageStore(o_Image, textureIndex, resultColor);
