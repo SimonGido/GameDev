@@ -626,7 +626,7 @@ bool DrawModel(in Ray cameraRay, in VoxelModel model, inout float drawDistance)
 		result.WorldHit = cameraRay.Origin + (cameraRay.Direction * result.Distance);
 		result.WorldNormal = mat3(model.InverseTransform) * result.Normal;
 		StoreHitResult(result);			
-		drawDistance = result.Distance;
+		drawDistance = min(result.Distance, drawDistance);
 		return true;
 	}
 	return false;
