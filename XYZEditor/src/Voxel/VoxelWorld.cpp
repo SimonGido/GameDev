@@ -198,7 +198,7 @@ namespace XYZ {
 		submesh.Height = sc_ChunkDimensions.y;
 		submesh.Depth = sc_ChunkDimensions.z;
 		submesh.VoxelSize = sc_ChunkVoxelSize;
-		submesh.IsOpaque = true;
+		submesh.IsOpaque = false;
 
 		VoxelSubmesh waterSubmesh;
 		waterSubmesh.Width = sc_ChunkDimensions.x;
@@ -269,7 +269,12 @@ namespace XYZ {
 				}
 			}
 		}
-		submesh.Compress(16, cancel, 2); // Do not compress water indices
+
+		if (chunkX >= -1 && chunkX <= 1 && chunkZ >= -1 && chunkZ <= 1)
+			submesh.Compress(16, cancel, 2); // Do not compress water indices
+		else
+			submesh.Compress(16, cancel);
+
 		waterSubmesh.Compress(16, cancel);
 
 		chunk.Mesh->SetSubmeshes({ submesh });
