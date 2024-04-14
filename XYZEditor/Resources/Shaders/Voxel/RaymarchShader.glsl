@@ -443,22 +443,11 @@ RaymarchResult RayMarchModel(in Ray ray, float tMin, in VoxelModel model, vec4 c
 	vec3 delta				= voxelSize / ray.Direction * vec3(step);	
 	ivec3 maxSteps			= ivec3(width, height, depth);
 	RaymarchState state		= CreateRaymarchState(ray, tMin, step, maxSteps, voxelSize, decompressedVoxelOffset);
-	bool exceededDistance	= false;
+
 	while (state.MaxSteps.x >= 0 && state.MaxSteps.y >= 0 && state.MaxSteps.z >= 0) 
-	{				
+	{						
 		if (IsValidVoxel(state.CurrentVoxel, width, height, depth))
 		{
-			// if new depth is bigger than currentDepth it means there is something in front of us	
-			if (state.Distance > currentDistance && exceededDistance == false) 
-			{
-				exceededDistance = true;
-				if (currentColor.a >= 1.0)
-					break;
-				
-				result.Color = BlendColors(currentColor, result.Color);
-				if (result.Color.a >= 1.0)
-					break;
-			}
 			uint voxelIndex = Index3D(state.CurrentVoxel, width, height) + voxelOffset;
 			uint colorIndex = uint(Voxels[voxelIndex]);
 			uint voxel		= ColorPallete[colorPalleteIndex][colorIndex];
@@ -470,7 +459,18 @@ RaymarchResult RayMarchModel(in Ray ray, float tMin, in VoxelModel model, vec4 c
 					result.Normal = state.Normal;
 					result.Hit	 = true;
 				}
-				result.Color = BlendColors(result.Color, VoxelToColor(voxel));
+
+				vec4 voxelColor = VoxelToColor(voxel);
+				vec4 newColor = BlendColors(result.Color, voxelColor);
+
+				if (state.Distance > currentDistance)
+				{
+					vec4 blendedColor = BlendColors(currentColor, newColor);
+					if (blendedColor.a > 1.0)
+						break;
+				}
+	
+				result.Color = newColor;
 				if (result.Color.a >= 1.0)
 					break;
 			}
@@ -650,13 +650,13 @@ void StoreHitResult(in RaymarchResult result, float currentDistance)
 {
 	ivec2 textureIndex = ivec2(gl_GlobalInvocationID.xy);	
 	
-	if (currentDistance >= result.Distance || currentDistance < 0)
+	if (currentDistance >= result.Distance)
 	{
 		imageStore(o_Normal, textureIndex, vec4(result.WorldNormal, 1.0));
 		imageStore(o_Position, textureIndex, vec4(result.WorldHit, 1.0));
 		imageStore(o_DepthImage, textureIndex, vec4(result.Distance, 0,0,0)); // Store new depth
 	}
-	imageStore(o_Image, textureIndex, result.Color); // Store color		
+	//imageStore(o_Image, textureIndex, result.Color); // Store color		
 	
 	if (u_Uniforms.ShowDepth)
 	{
@@ -670,7 +670,7 @@ void StoreHitResult(in RaymarchResult result, float currentDistance)
 	}
 }
 
-bool DrawModel(in Ray cameraRay, in VoxelModel model, inout vec4 drawColor, inout float drawDistance)
+bool DrawModel(in Ray cameraRay, in VoxelModel model, inout vec4 drawColor, inout float drawDistance, vec4 resultColor, float minDistance)
 {
 	ivec2 textureIndex = ivec2(gl_GlobalInvocationID.xy);
 	
@@ -689,20 +689,17 @@ bool DrawModel(in Ray cameraRay, in VoxelModel model, inout vec4 drawColor, inou
 	}
 	else
 	{
-		result = RayMarchModel(modelRay, tMin, model, drawColor, drawDistance, ivec3(0,0,0));	
+		result = RayMarchModel(modelRay, tMin, model, resultColor, minDistance, ivec3(0,0,0));	
 	}
 	if (result.Hit)		
 	{ 
 		result.WorldHit = cameraRay.Origin + (cameraRay.Direction * result.Distance);
 		result.WorldNormal = mat3(model.InverseTransform) * result.Normal;
 
-		if (result.Color.a < 1.0 && drawDistance >= result.Distance) // Transparent and something is behind us
-			result.Color = BlendColors(result.Color, drawColor);
-		
-		StoreHitResult(result, drawDistance);	
-		drawDistance = max(result.Distance, drawDistance); // Take max distance ( This is not always the case)
-		drawColor = result.Color; // Our color becomes new last drawColor
 
+		StoreHitResult(result, drawDistance);	
+		drawDistance = result.Distance;
+		drawColor = result.Color; // Our color becomes new last drawColor
 		return true;
 	}
 	return false;
@@ -946,13 +943,31 @@ void main()
 		RaycastOctree(cameraRay);
 	}
 	else
-	{
-		float drawDistance = -FLT_MAX;
-		vec4 drawColor = vec4(0,0,0,0);
+	{		
+		float minDistance	= FLT_MAX;
+		float newDistance	= 0.0;
+		vec4 newColor		= vec4(0,0,0,0);
+		vec4 resultColor	= vec4(0,0,0,0);
+
 		for (uint i = 0; i < NumModels; i++)
 		{
 			VoxelModel model = Models[i];
-			DrawModel(cameraRay, model, drawColor, drawDistance);
+			if (DrawModel(cameraRay, model, newColor, newDistance, resultColor, minDistance))
+			{
+				if (newDistance < minDistance)
+				{
+					resultColor = BlendColors(newColor, resultColor);
+					minDistance = newDistance;
+				}
+				else
+				{
+					resultColor = BlendColors(resultColor, newColor);
+				}
+
+				//if (resultColor.a >= 1.0)
+				//	break;
+			}	
 		}
+		imageStore(o_Image, textureIndex, resultColor);
 	}
 }
