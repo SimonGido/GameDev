@@ -271,12 +271,11 @@ namespace XYZ {
 		}
 
 		if (chunkX >= -1 && chunkX <= 1 && chunkZ >= -1 && chunkZ <= 1)
-			submesh.Compress(16, cancel, 2); // Do not compress water indices
+			submesh.Compress(16, cancel); // Do not compress water indices
 		else
 			submesh.Compress(16, cancel);
 
-		waterSubmesh.Compress(16, cancel);
-
+	
 		chunk.Mesh->SetSubmeshes({ submesh });
 		chunk.Mesh->SetInstances({ instance });
 
