@@ -86,8 +86,9 @@ namespace XYZ {
 		m_UBVoxelScene.CameraPosition = glm::vec4(camera.CameraPosition, 1.0f);
 		m_UBVoxelScene.ViewportSize.x = m_ViewportSize.x;
 		m_UBVoxelScene.ViewportSize.y = m_ViewportSize.y;
-		m_SSBOVoxelModels.NumModels = 0;
-		
+		m_SSBOVoxelModels.OpaqueModelCount = 0;
+		m_SSBOVoxelModels.TransparentModelCount = 0;
+
 		m_RenderModelsSorted.clear();
 		m_RenderModels.clear();
 		m_VoxelMeshBuckets.clear();
@@ -341,10 +342,12 @@ namespace XYZ {
 	{
 		XYZ_PROFILE_FUNC("VoxelRenderer::updateVoxelModelsSSBO");
 		// Update ssbos
+		const uint32_t modelCount = m_SSBOVoxelModels.OpaqueModelCount + m_SSBOVoxelModels.TransparentModelCount;
 		const uint32_t voxelModelsUpdateSize =
-			sizeof(SSBOVoxelModels::NumModels)
+			sizeof(SSBOVoxelModels::OpaqueModelCount)
+			+ sizeof(SSBOVoxelModels::TransparentModelCount)
 			+ sizeof(SSBOVoxelModels::Padding)
-			+ m_SSBOVoxelModels.NumModels * sizeof(VoxelModel);
+			+ modelCount * sizeof(VoxelModel);
 
 		m_StorageBufferSet->Update((void*)&m_SSBOVoxelModels, voxelModelsUpdateSize, 0, SSBOVoxelModels::Binding, SSBOVoxelModels::Set);
 		
@@ -883,7 +886,10 @@ namespace XYZ {
 					model.CompressScale = submesh.CompressScale;
 					model.CellsOffset = meshAlloc.Offsets[cmdModel->SubmeshIndex].CompressedCell;
 				}
-				m_SSBOVoxelModels.NumModels++;
+				if (submesh.IsOpaque)
+					m_SSBOVoxelModels.OpaqueModelCount++;
+				else
+					m_SSBOVoxelModels.TransparentModelCount++;
 			}
 
 		}

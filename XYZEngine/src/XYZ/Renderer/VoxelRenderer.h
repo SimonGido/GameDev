@@ -92,9 +92,11 @@ namespace XYZ {
 	struct SSBOVoxelModels
 	{
 		static constexpr uint32_t MaxModels = 1024;
+		
+		uint32_t OpaqueModelCount;
+		uint32_t TransparentModelCount;
 
-		uint32_t NumModels;
-		Padding<12> Padding;
+		Padding<8> Padding;
 		
 		VoxelModel	 Models[MaxModels];
 
@@ -224,7 +226,7 @@ namespace XYZ {
 
 		bool IsMeshAllocated(const Ref<VoxelMesh>& mesh) const;
 
-		uint32_t	 GetModelCount() const { return m_SSBOVoxelModels.NumModels; }
+		uint32_t	 GetModelCount() const { return m_SSBOVoxelModels.OpaqueModelCount + m_SSBOVoxelModels.TransparentModelCount; }
 		Ref<Image2D> GetFinalPassImage() const;
 	private:
 		struct VoxelRenderModel

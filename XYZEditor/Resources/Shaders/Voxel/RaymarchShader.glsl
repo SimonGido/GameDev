@@ -121,7 +121,8 @@ layout(std430, binding = 17) readonly buffer buffer_Voxels
 
 layout(std430, binding = 18) readonly buffer buffer_Models
 {		
-	uint		 NumModels;
+	uint		 OpaqueModelCount;
+	uint	     TransparentModelCount;
 	VoxelModel	 Models[MAX_MODELS];
 };
 
@@ -608,6 +609,9 @@ bool DrawModel(in Ray cameraRay, in VoxelModel model, inout float drawDistance)
 	if (!ResolveRayModelIntersection(modelRay.Origin, modelRay.Direction, model, tMin, tMax))
 		return false;
 
+	if (tMin > drawDistance)
+		return false;
+
 	RaymarchResult result;
 	if (model.Compressed)
 	{
@@ -648,7 +652,7 @@ void RaycastBVH(in Ray cameraRay)
 	ivec2 textureIndex = ivec2(gl_GlobalInvocationID.xy);
 
 	bool modelDrawn[MAX_MODELS];
-	for (int i = 0; i < NumModels; i++)
+	for (int i = 0; i < 0; i++)
 		modelDrawn[i] = false;
 
 	int hitCount = 0;
@@ -697,7 +701,7 @@ void RaycastOctree(in Ray ray)
 	ivec2 textureIndex = ivec2(gl_GlobalInvocationID.xy);
 
 	bool modelDrawn[MAX_MODELS];
-	for (int i = 0; i < NumModels; i++)
+	for (int i = 0; i < 0; i++)
 		modelDrawn[i] = false;
 
 	int maxModelHit = -1;
@@ -798,7 +802,7 @@ void RaycastModelGrid(in Ray cameraRay, bool opaque)
 		
 
 	bool modelDrawn[MAX_MODELS];
-	for (int i = 0; i < NumModels; i++)
+	for (int i = 0; i < 0; i++)
 		modelDrawn[i] = false;
 	
 	int drawModelCount = 0;
@@ -868,7 +872,12 @@ void main()
 	else
 	{
 		float drawDistance = FLT_MAX;
-		for (uint i = 0; i < NumModels; i++)
+		for (uint i = 0; i < OpaqueModelCount; i++)
+		{
+			VoxelModel model = Models[i];
+			DrawModel(cameraRay, model, drawDistance);
+		}
+		for (uint i = OpaqueModelCount; i < OpaqueModelCount + TransparentModelCount; i++)
 		{
 			VoxelModel model = Models[i];
 			DrawModel(cameraRay, model, drawDistance);
