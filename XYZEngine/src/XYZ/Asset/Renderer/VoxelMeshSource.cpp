@@ -321,6 +321,7 @@ namespace XYZ {
 	}
 
 
+	
 	VoxelSubmesh VoxelSubmesh::Compress(uint32_t scale, uint32_t width, uint32_t height, uint32_t depth, float voxelSize, const std::vector<uint8_t>& colorIndices)
 	{
 		VoxelSubmesh result;
@@ -383,4 +384,72 @@ namespace XYZ {
 		}
 		return result;
 	}
+	//void VoxelSubmesh::compressBaseLevel(
+	//	VoxelSubmeshCompressedTree::VoxelSubmeshCompressLevel& resultLevel,
+	//	std::vector<uint8_t>& resultColorIndices,
+	//	uint32_t level, 
+	//	uint32_t width, 
+	//	uint32_t height, 
+	//	uint32_t depth, 
+	//	float voxelSize, 
+	//	const std::vector<uint8_t>& colorIndices
+	//)
+	//{
+	//	resultLevel.Level = level;
+	//	resultLevel.Width = Math::RoundUp(width, level) / level;
+	//	resultLevel.Height = Math::RoundUp(height, level) / level;
+	//	resultLevel.Depth = Math::RoundUp(depth, level) / level;
+	//	resultLevel.VoxelSize = voxelSize * level;
+	//	resultLevel.LevelCells.resize(resultLevel.Width * resultLevel.Height * resultLevel.Depth);
+	//
+	//	uint32_t voxelOffset = 0;
+	//	for (uint32_t cx = 0; cx < resultLevel.Width; ++cx)
+	//	{
+	//		for (uint32_t cy = 0; cy < resultLevel.Height; ++cy)
+	//		{
+	//			for (uint32_t cz = 0; cz < resultLevel.Depth; ++cz)
+	//			{
+	//				const uint32_t cIndex = Index3D(cx, cy, cz, resultLevel.Width, resultLevel.Height);
+	//				auto& cell = resultLevel.LevelCells[cIndex];
+	//
+	//				const uint32_t xStart = cx * level;
+	//				const uint32_t yStart = cy * level;
+	//				const uint32_t zStart = cz * level;
+	//
+	//				const uint32_t xEnd = std::min(xStart + level, width);
+	//				const uint32_t yEnd = std::min(yStart + level, height);
+	//				const uint32_t zEnd = std::min(zStart + level, depth);
+	//
+	//				const bool isUniform = IsBlockUniform(colorIndices, { xStart, yStart, zStart }, { xEnd, yEnd, zEnd }, width, height);
+	//				if (isUniform)
+	//				{
+	//					cell.VoxelCount = 1;
+	//					resultColorIndices.push_back(colorIndices[Index3D(xStart, yStart, zStart, width, height)]);
+	//				}
+	//				else
+	//				{
+	//					const uint32_t offset = static_cast<uint32_t>(colorIndices.size());
+	//					cell.VoxelCount = level * level * level;
+	//					resultColorIndices.resize(offset + cell.VoxelCount);
+	//					uint8_t* cellColorIndices = &resultColorIndices[offset];
+	//					for (uint32_t x = xStart; x < xEnd; ++x)
+	//					{
+	//						for (uint32_t y = yStart; y < yEnd; ++y)
+	//						{
+	//							for (uint32_t z = zStart; z < zEnd; ++z)
+	//							{
+	//								const uint32_t index = Index3D(x, y, z, width, height);
+	//								const uint32_t insertIndex = Index3D(x - xStart, y - yStart, z - zStart, level, level);
+	//								const uint8_t colorIndex = colorIndices[index];
+	//								cellColorIndices[insertIndex] = colorIndex;
+	//							}
+	//						}
+	//					}
+	//				}
+	//				cell.VoxelOffset = voxelOffset;
+	//				voxelOffset += cell.VoxelCount;
+	//			}
+	//		}
+	//	}
+	//}
 }

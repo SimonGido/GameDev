@@ -26,14 +26,13 @@ namespace XYZ {
 		uint32_t Width;
 		uint32_t Height;
 		uint32_t Depth;
-		uint32_t CompressScale = 1;
-		float	 VoxelSize = 1.0f;
-		bool	 Compressed = false;
-		bool	 IsOpaque = false;
+		uint32_t CompressScale	= 1;
+		float	 VoxelSize		= 1.0f;
+		bool	 Compressed		= false;
+		bool	 IsOpaque		= false;
 
-		std::vector<uint8_t> ColorIndices;
-		std::vector<CompressedCell> CompressedCells;
-
+		std::vector<uint8_t>			ColorIndices;
+		std::vector<CompressedCell>		CompressedCells;
 
 		bool DecompressCell(uint32_t cx, uint32_t cy, uint32_t cz);
 
@@ -42,8 +41,9 @@ namespace XYZ {
 		int64_t	Compress(uint32_t scale, bool& cancel, uint8_t skipColorIndex);
 
 
+		
 		static VoxelSubmesh Compress(uint32_t scale, uint32_t width, uint32_t height, uint32_t depth, float voxelSize, const std::vector<uint8_t>& colorIndices);
-	
+
 	private:
 		std::vector<CompressedCell> m_FreeSpace;
 	};

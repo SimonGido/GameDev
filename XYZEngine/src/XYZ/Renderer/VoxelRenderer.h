@@ -15,31 +15,6 @@
 
 namespace XYZ {
 
-	struct VoxelModelBVHNode
-	{
-		glm::vec4 Min;
-		glm::vec4 Max;
-
-		int32_t Depth = 0;
-		int32_t Data = BVHNode::Invalid;
-		int32_t Left = BVHNode::Invalid;
-		int32_t Right = BVHNode::Invalid;
-	};
-
-	struct VoxelModelOctreeNode
-	{
-		glm::vec4 Min;
-		glm::vec4 Max;
-
-		int32_t Children[8]{ -1 };
-
-		Bool32	IsLeaf;
-		int32_t DataStart;
-		int32_t DataEnd;
-
-		Padding<4> Padding;
-	};
-
 
 
 	struct UBVoxelScene
@@ -104,23 +79,6 @@ namespace XYZ {
 		static constexpr uint32_t Set = 0;
 	};
 
-
-	struct SSBOOCtree
-	{
-		static constexpr uint32_t MaxNodes = 16384;
-
-		static constexpr uint32_t Binding = 28;
-		static constexpr uint32_t Set = 0;
-
-
-		uint32_t			 NodeCount;
-		Padding<12>			 Padding;
-		VoxelModelOctreeNode Nodes[MaxNodes];
-		uint32_t			 ModelIndices[SSBOVoxelModels::MaxModels];
-	};
-
-
-	
 	struct SSBOColors
 	{
 		static constexpr uint32_t MaxColors = 1024;
@@ -155,44 +113,6 @@ namespace XYZ {
 		static constexpr uint32_t Set = 0;
 	};
 
-	struct SSBOBVH
-	{
-		static constexpr uint32_t MaxNodes = 16384;
-
-		static constexpr uint32_t Binding = 23;
-		static constexpr uint32_t Set = 0;
-
-
-		uint32_t			 NodeCount;
-		Padding<12>			 Padding;
-		VoxelModelBVHNode	 Nodes[MaxNodes];
-	};
-
-
-	struct SSBOGridCell
-	{
-		uint32_t ModelOffset = 0;
-		uint32_t ModelCount = 0;
-	};
-
-	struct SSBOModelGrid
-	{
-		static constexpr glm::ivec3 MaxDimensions = { 10,3,10 };
-
-		static constexpr uint32_t Binding = 26;
-		static constexpr uint32_t Set = 0;
-
-		glm::ivec3			 Dimensions = MaxDimensions;
-		Padding<4>			 PaddingDim;
-
-		glm::vec3			 CellSize;
-		Padding<4>			 PaddingSize;
-
-		glm::mat4			 InverseTransform;
-
-		SSBOGridCell		 Cells[MaxDimensions.x * MaxDimensions.y * MaxDimensions.z];
-		uint32_t			 ModelIndices[SSBOVoxelModels::MaxModels * 5];
-	};
 
 	struct VoxelRendererCamera
 	{
@@ -304,12 +224,8 @@ namespace XYZ {
 		void updateUniformBufferSet();
 
 		void prepareModels();
-		
-
+	
 		void updateVoxelModelsSSBO();
-		void updateBVHSSBO();
-		void updateModelGridSSBO();
-		void updateOctreeSSBO();
 
 		void createDefaultPipelines();
 		Ref<PipelineCompute> getEffectPipeline(const Ref<MaterialAsset>& material);
@@ -354,9 +270,6 @@ namespace XYZ {
 
 		UBVoxelScene			m_UBVoxelScene;
 		SSBOVoxelModels			m_SSBOVoxelModels;
-		SSBOBVH					m_SSBOBVH;
-		SSBOModelGrid			m_SSBOModelGrid;
-		SSBOOCtree				m_SSBOOctree;
 
 		SSGIValues				m_SSGIValues;
 		glm::ivec2				m_ViewportSize;
@@ -367,10 +280,6 @@ namespace XYZ {
 		Math::Frustum			m_Frustum;
 	
 		bool					m_UseSSGI = false;
-		bool					m_UseBVH = false;
-		bool					m_UseOctree = false;
-		bool					m_UseAABBGrid = false;
-		bool					m_ShowBVH = false;
 		bool					m_ShowDepth = false;
 		bool					m_ShowNormals = false;
 
@@ -398,9 +307,6 @@ namespace XYZ {
 		};
 		GPUTimeQueries m_GPUTimeQueries;
 
-		BVH			m_ModelsBVH;
-		AABBGrid	m_ModelsGrid;
-		Octree		m_ModelsOctree;
 		std::unique_ptr<VoxelRendererDebug> m_DebugRenderer;
 	};
 

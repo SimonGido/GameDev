@@ -20,10 +20,6 @@ const uint OPAQUE = 255;
 
 layout(push_constant) uniform Uniforms
 {
-	bool UseOctree;
-	bool UseModelGrid;
-	bool UseBVH;
-	bool ShowBVH;
 	bool ShowDepth;
 	bool ShowNormals;
 
@@ -40,34 +36,6 @@ struct AABB
 	vec3 Min;
 	vec3 Max;
 };
-
-struct VoxelModelOctreeNode
-{
-	vec4 Min;
-	vec4 Max;
-
-	int  Children[8];
-	
-	bool IsLeaf;
-	int  DataStart;
-	int  DataEnd;
-
-	uint Padding;
-};
-
-
-
-struct VoxelModelBVHNode
-{
-	vec4 Min;
-	vec4 Max;
-
-	int Depth;
-	int Data;
-	int Left;
-	int Right;
-};
-
 
 struct VoxelModel
 {
@@ -95,11 +63,7 @@ struct VoxelCompressedCell
 	uint VoxelOffset;
 };
 
-struct ModelGridCell
-{
-	uint ModelOffset;
-	uint ModelCount;
-};
+
 
 layout (std140, binding = 16) uniform Scene
 {
@@ -136,29 +100,7 @@ layout(std430, binding = 20) readonly buffer buffer_Compressed
 	VoxelCompressedCell CompressedCells[];
 };
 
-layout(std430, binding = 23) readonly buffer buffer_BVH
-{		
-	uint NodeCount;
-	uint Padding[3];
-	VoxelModelBVHNode Nodes[];
-};
 
-layout(std430, binding = 26) readonly buffer buffer_ModelGrid
-{		
-	ivec3	GridDimensions;
-	vec3	GridCellSize;
-	mat4	GridInverseTransform;
-	ModelGridCell GridCells[MODEL_GRID_MAX_CELLS];
-	uint	GridModelIndices[];
-};
-
-layout(std430, binding = 28) readonly buffer buffer_Octree
-{		
-	uint OctreeNodeCount;
-	uint OctreePadding[3];
-	VoxelModelOctreeNode OctreeNodes[MAX_NODES];
-	uint OctreeModelIndices[MAX_MODELS];
-};
 
 layout(binding = 21, rgba32f) uniform image2D o_Image;
 layout(binding = 22, r32f) uniform image2D o_DepthImage;
@@ -289,6 +231,18 @@ struct RaymarchState
 	ivec3 DecompressedVoxelOffset;
 };
 
+VoxelModel CreateCellModel(in VoxelModel model, uint cellVoxelOffset)
+{	
+	VoxelModel cellModel;
+	cellModel.ColorIndex	= model.ColorIndex;
+	cellModel.VoxelOffset	= model.VoxelOffset + cellVoxelOffset;
+	cellModel.Width			= model.CompressScale;
+	cellModel.Height		= model.CompressScale;
+	cellModel.Depth			= model.CompressScale;
+	cellModel.VoxelSize		= model.VoxelSize / model.CompressScale;
+
+	return cellModel;
+}
 
 vec3 GetNormalFromState(in RaymarchState state, ivec3 step)
 {
@@ -508,10 +462,10 @@ RaymarchResult RaymarchCompressed(in Ray ray, vec4 startColor, float tMin, in Vo
 						result.Hit = true;
 					}	
 
-					float tMin = state.Distance;
-					float tMax = min(GetNextDistance(state, step, t_delta), currentDistance);
-					int numSteps = CalculateNumberOfSteps(ray, tMin, tMax, model.VoxelSize / model.CompressScale);
-					vec4 cellColor = VoxelToColor(colorUINT);
+					float tMin		= state.Distance;
+					float tMax		= min(GetNextDistance(state, step, t_delta), currentDistance);
+					int numSteps	= CalculateNumberOfSteps(ray, tMin, tMax, model.VoxelSize / model.CompressScale);
+					vec4 cellColor	= VoxelToColor(colorUINT);
 					for (int i = 0; i < numSteps; i++)
 					{
 						result.Color = BlendColors(result.Color, cellColor);
@@ -522,15 +476,7 @@ RaymarchResult RaymarchCompressed(in Ray ray, vec4 startColor, float tMin, in Vo
 			}
 			else
 			{
-				// Calculates real coordinates of CurrentVoxel in decompressed model
-				VoxelModel cellModel;
-				cellModel.ColorIndex	= model.ColorIndex;
-				cellModel.VoxelOffset	= model.VoxelOffset + cell.VoxelOffset;
-				cellModel.Width			= model.CompressScale;
-				cellModel.Height		= model.CompressScale;
-				cellModel.Depth			= model.CompressScale;
-				cellModel.VoxelSize		= model.VoxelSize / model.CompressScale;
-
+				VoxelModel cellModel = CreateCellModel(model, cell.VoxelOffset);
 				RaymarchResult newResult = RayMarchModel(ray, result.Color, state.Distance - EPSILON, cellModel, currentDistance, decompressedVoxelOffset);				
 				if (newResult.Hit)
 				{
@@ -577,7 +523,6 @@ void StoreHitResult(in RaymarchResult result)
 		vec4 backColor = imageLoad(o_Image, textureIndex);
 		result.Color = BlendColors(result.Color, backColor);
 	}
-
 
 	imageStore(o_Normal, textureIndex, vec4(result.WorldNormal, 1.0));
 	imageStore(o_Position, textureIndex, vec4(result.WorldHit, 1.0));
@@ -632,216 +577,6 @@ bool DrawModel(in Ray cameraRay, in VoxelModel model, inout float drawDistance)
 	return false;
 }
 
-
-void RaycastBVH(in Ray cameraRay)
-{
-	if (NodeCount == 0)
-		return;
-
-	VoxelModelBVHNode root = Nodes[0];
-
-	float tMin = 0.0;
-	float tMax = 0.0;
-	if (!RayBoxIntersectionInside(cameraRay.Origin, cameraRay.Direction, root.Min.xyz, root.Max.xyz, tMin, tMax))
-		return;
-
-	int stackIndex = 0;
-	uint stack[STACK_MAX];
-	stack[stackIndex++] = 0; // Start with the root node
-
-	ivec2 textureIndex = ivec2(gl_GlobalInvocationID.xy);
-
-	bool modelDrawn[MAX_MODELS];
-	for (int i = 0; i < 0; i++)
-		modelDrawn[i] = false;
-
-	int hitCount = 0;
-	int maxHitIndex = -1;
-	while (stackIndex > 0)
-	{
-		stackIndex--;
-		uint nodeIndex = stack[stackIndex];
-		VoxelModelBVHNode node = Nodes[nodeIndex];
-
-		if (node.Data != -1)
-		{
-			maxHitIndex = max(maxHitIndex, node.Data);
-			modelDrawn[node.Data] = true;
-		}
-		else if (RayAABBOverlap(cameraRay.Origin, cameraRay.Direction, node.Min.xyz, node.Max.xyz))
-		{		
-			if (node.Left != -1)
-			{	
-				stack[stackIndex++] = node.Left;
-				stack[stackIndex++] = node.Right;
-			}
-			hitCount++;
-		}
-	}
-	for (int i = 0; i <= maxHitIndex; i++)
-	{
-		if (modelDrawn[i])
-		{
-			float drawDistance = FLT_MAX;
-			VoxelModel model = Models[i];
-			DrawModel(cameraRay, model, drawDistance);
-		}
-	}
-	if (u_Uniforms.ShowBVH)
-	{
-		vec3 gradient = GetGradient(hitCount / 5) * 0.3;
-		vec4 origColor = imageLoad(o_Image, textureIndex);
-		origColor.rgb += gradient;
-		imageStore(o_Image, textureIndex, vec4(gradient.rgb, origColor.a));		
-	}
-}
-
-void RaycastOctree(in Ray ray)
-{
-	ivec2 textureIndex = ivec2(gl_GlobalInvocationID.xy);
-
-	bool modelDrawn[MAX_MODELS];
-	for (int i = 0; i < 0; i++)
-		modelDrawn[i] = false;
-
-	int maxModelHit = -1;
-	int stack[MAX_DEPTH * 5];
-	int stackIndex = 0;
-	stack[stackIndex++] = 0; // Start with the root node
-	int hitCount = 0;
-	while (stackIndex > 0)
-	{
-		stackIndex--;
-		int nodeIndex = stack[stackIndex];
-		VoxelModelOctreeNode node = OctreeNodes[nodeIndex];
-			
-		for (int i = node.DataStart; i < node.DataEnd; i++)
-		{
-			float drawDistance;
-			uint modelIndex = OctreeModelIndices[i];
-			modelDrawn[modelIndex] = true;
-			maxModelHit = max(maxModelHit, int(modelIndex));
-		}
-
-		if (!node.IsLeaf)
-		{
-			for (int c = 0; c < 8; c++)
-			{
-				VoxelModelOctreeNode child = OctreeNodes[node.Children[c]];
-				if (child.DataEnd - child.DataStart == 0 && child.IsLeaf)
-					continue;
-
-				float tMin = 0.0;
-				float tMax = 0.0;
-				if (RayBoxIntersectionInside(ray.Origin, ray.Direction, child.Min.xyz, child.Max.xyz, tMin, tMax))
-				{
-					stack[stackIndex++] = node.Children[c];
-					hitCount++;
-				}
-			}
-		}
-	}
-	for (int i = 0; i <= maxModelHit; i++)
-	{
-		if (modelDrawn[i])
-		{
-			float drawDistance = FLT_MAX;
-			VoxelModel model = Models[i];
-			DrawModel(ray, model, drawDistance);
-		}
-	}
-
-	if (u_Uniforms.ShowBVH)
-	{
-		vec3 gradient = GetGradient(hitCount) * 0.3;
-		vec4 origColor = imageLoad(o_Image, textureIndex);
-		origColor.rgb += gradient;
-		imageStore(o_Image, textureIndex, vec4(gradient.rgb, origColor.a));		
-	}
-}
-
-
-void RaycastModelGrid(in Ray cameraRay, bool opaque)
-{
-	ivec2 textureIndex = ivec2(gl_GlobalInvocationID.xy);
-	Ray gridRay = CreateRay(u_CameraPosition.xyz, GridInverseTransform, textureIndex);
-
-	AABB modelGridAABB;
-	modelGridAABB.Min.x = 0;
-	modelGridAABB.Min.y = 0;
-	modelGridAABB.Min.z = 0;
-
-	modelGridAABB.Max.x = GridDimensions.x * GridCellSize.x;
-	modelGridAABB.Max.y = GridDimensions.y * GridCellSize.y;
-	modelGridAABB.Max.z = GridDimensions.z * GridCellSize.z;
-	
-	float tMin = 0.0;
-	float tMax = 0.0;
-
-	if (!RayBoxIntersectionInside(gridRay.Origin, gridRay.Direction, modelGridAABB.Min.xyz, modelGridAABB.Max.xyz, tMin, tMax))
-		return;
-
-	if (!opaque)
-	{
-		gridRay.Origin = gridRay.Origin + (gridRay.Direction * tMax);
-		gridRay.Direction = -gridRay.Direction;
-		tMin = 0.0;
-	}
-
-	ivec3 step = ivec3(
-		(gridRay.Direction.x > 0.0) ? 1 : -1,
-		(gridRay.Direction.y > 0.0) ? 1 : -1,
-		(gridRay.Direction.z > 0.0) ? 1 : -1
-	);
-
-	vec3 delta = GridCellSize / gridRay.Direction * vec3(step);	
-
-	RaymarchState state = CreateRaymarchState(gridRay, tMin, step, GridDimensions, GridCellSize, ivec3(0,0,0));
-	if (!opaque)
-		state.Distance = tMax;
-		
-
-	bool modelDrawn[MAX_MODELS];
-	for (int i = 0; i < 0; i++)
-		modelDrawn[i] = false;
-	
-	int drawModelCount = 0;
-	float lastDrawDistance = FLT_MAX;
-	while (state.MaxSteps.x >= 0 && state.MaxSteps.y >= 0 && state.MaxSteps.z >= 0)
-	{
-		if (IsValidVoxel(state.CurrentVoxel, GridDimensions.x, GridDimensions.y, GridDimensions.z))
-		{			
-			//if (state.Distance > lastDrawDistance)
-			//	break;
-
-			uint cellIndex = Index3D(state.CurrentVoxel, GridDimensions.x, GridDimensions.y);
-			ModelGridCell cell = GridCells[cellIndex];
-	
-			for (uint i = cell.ModelOffset; i < cell.ModelOffset + cell.ModelCount; i++)
-			{
-				uint modelIndex = GridModelIndices[i];
-				if (modelDrawn[modelIndex])
-					continue;
-				VoxelModel model = Models[modelIndex];
-				//if (model.Opaque != opaque)
-				//	continue;
-
-				DrawModel(cameraRay, model, lastDrawDistance);
-				modelDrawn[modelIndex] = true;
-				drawModelCount++;
-			}	
-		}
-		PerformStep(state, step, delta);
-	}
-
-	//vec3 gradient = GetGradient(drawModelCount) * 0.3;
-	//vec4 origColor = imageLoad(o_Image, textureIndex);
-	//origColor.rgb += gradient;
-	//imageStore(o_Image, textureIndex, vec4(gradient.rgb, origColor.a));		
-}
-
-
-
 bool ValidPixel(ivec2 index)
 {
 	return index.x <= int(u_ViewportSize.x) && index.y <= int(u_ViewportSize.y);
@@ -855,37 +590,19 @@ void main()
 		return;
 
 	Ray cameraRay = CreateRay(u_CameraPosition.xyz, textureIndex);
-
-	if (u_Uniforms.UseBVH)
+	float drawDistance = FLT_MAX;
+	for (uint i = 0; i < OpaqueModelCount; i++)
 	{
-		RaycastBVH(cameraRay);
+		VoxelModel model = Models[i];
+		DrawModel(cameraRay, model, drawDistance);
 	}
-	else if (u_Uniforms.UseModelGrid)
-	{
-		RaycastModelGrid(cameraRay, true);
-		//RaycastModelGrid(cameraRay, false);
-	}
-	else if (u_Uniforms.UseOctree)
-	{
-		RaycastOctree(cameraRay);
-	}
-	else
-	{
-		float drawDistance = FLT_MAX;
-		for (uint i = 0; i < OpaqueModelCount; i++)
-		{
-			VoxelModel model = Models[i];
-			DrawModel(cameraRay, model, drawDistance);
-		}
 
-		
-		int transparentStart = int(OpaqueModelCount);
-		int transparentEnd = int(OpaqueModelCount + TransparentModelCount);
+	int transparentStart = int(OpaqueModelCount);
+	int transparentEnd = int(OpaqueModelCount + TransparentModelCount);
 
-		for (uint i = transparentStart; i < transparentEnd; i++)
-		{
-			VoxelModel model = Models[i];
-			DrawModel(cameraRay, model, drawDistance);
-		}
+	for (uint i = transparentStart; i < transparentEnd; i++)
+	{
+		VoxelModel model = Models[i];
+		DrawModel(cameraRay, model, drawDistance);
 	}
 }
