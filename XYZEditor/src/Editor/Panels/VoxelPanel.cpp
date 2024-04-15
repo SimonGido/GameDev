@@ -131,7 +131,7 @@ namespace XYZ {
 			treeSubmesh.Width = 100;
 			treeSubmesh.Height = 300;
 			treeSubmesh.Depth = 100;
-			treeSubmesh.VoxelSize = 1.0f;
+			treeSubmesh.VoxelSize = 10.0f;
 
 			treeSubmesh.ColorIndices.resize(treeSubmesh.Width * treeSubmesh.Height * treeSubmesh.Depth, 0);
 
@@ -223,11 +223,11 @@ namespace XYZ {
 			{
 				int id = 0;
 
-				//for (auto& transform : m_TreeTransforms)
-				//{
-				//	ImGui::Text("%d", id);
-				//	drawTransform(transform, id++);
-				//}
+				for (auto& transform : m_TreeTransforms)
+				{
+					ImGui::Text("%d", id);
+					drawTransform(transform, id++);
+				}
 				for (auto& transform : m_Transforms)
 				{
 					ImGui::Text("%d", id);
@@ -305,7 +305,7 @@ namespace XYZ {
 				}
 				for (auto& transform : m_TreeTransforms)
 				{
-					//m_VoxelRenderer->SubmitMesh(m_TreeMesh, transform.GetLocalTransform());
+					m_VoxelRenderer->SubmitMesh(m_TreeMesh, transform.GetLocalTransform());
 				}
 				for (size_t i = 0; i < m_Transforms.size(); i += 3)
 				{
@@ -370,7 +370,7 @@ namespace XYZ {
 				{
 					if (m_SpaceColonization != nullptr)
 					{
-						VoxelSubmesh treeSubmesh = m_TreeMesh->GetSubmeshes()[0];
+ 						VoxelSubmesh treeSubmesh = m_TreeMesh->GetSubmeshes()[0];
 						m_SpaceColonization->Grow(
 							treeSubmesh.ColorIndices, 
 							treeSubmesh.Width, 

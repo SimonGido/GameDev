@@ -218,7 +218,7 @@ namespace XYZ {
 				if (branch->Children.empty())
 				{
 					glm::ivec3 voxel = branch->End / voxelSize;
-					glm::ivec3 elipsoid(RandomNumber(6u, 15u), RandomNumber(3u, 7u), RandomNumber(6u, 15u));
+					glm::ivec3 elipsoid(RandomNumber(6u, 15u), RandomNumber(3u, 15u), RandomNumber(6u, 15u));
 					int32_t max = std::max(elipsoid.x, std::max(elipsoid.y, elipsoid.z));
 					for (int32_t x = -max * 2; x < max * 2; x++)
 					{
