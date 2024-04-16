@@ -127,14 +127,27 @@ namespace XYZ {
 	class XYZ_API VoxelRenderer : public RefCount
 	{
 	public:
+		struct VoxelRenderModel
+		{
+			uint32_t  SubmeshIndex;
+			uint32_t  ModelIndex;
+			AABB	  BoundingBox;
+			glm::mat4 Transform;
+			Ref<VoxelMesh> Mesh;
+			float	  DistanceFromCamera;
+		};
+
+	public:
 		VoxelRenderer();
 
 		void BeginScene(const VoxelRendererCamera& camera);
 		void EndScene();
-		
+		void EndScene(const std::function<void()>& postPrepareModels);
+
 		void SetViewportSize(uint32_t width, uint32_t height);
 
 		bool SubmitMesh(const Ref<VoxelMesh>& mesh, const glm::mat4& transform);
+		bool SubmitMesh(const Ref<VoxelMesh>& mesh, const glm::mat4& transform, int32_t* indices);
 		bool SubmitMesh(const Ref<VoxelMesh>& mesh, const glm::mat4& transform, const uint32_t* keyFrames);
 
 		void SubmitEffect(const Ref<MaterialAsset>& material, bool isCompute, const glm::ivec3& workGroups, const PushConstBuffer& constants);
@@ -145,19 +158,12 @@ namespace XYZ {
 		void SubmitComputeData(const void* data, uint32_t size, uint32_t offset, const StorageBufferAllocation& allocation, bool allFrames = false);
 
 		bool IsMeshAllocated(const Ref<VoxelMesh>& mesh) const;
+		const VoxelRenderModel& GetVoxelRenderModel(uint32_t index) const { return m_RenderModels[index]; }
 
 		uint32_t	 GetModelCount() const { return m_SSBOVoxelModels.OpaqueModelCount + m_SSBOVoxelModels.TransparentModelCount; }
 		Ref<Image2D> GetFinalPassImage() const;
 	private:
-		struct VoxelRenderModel
-		{
-			uint32_t  SubmeshIndex;
-			uint32_t  ModelIndex;
-			AABB	  BoundingBox;
-			glm::mat4 Transform;
-			Ref<VoxelMesh> Mesh;
-			float	  DistanceFromCamera;
-		};
+		
 
 		struct VoxelMeshBucket
 		{
@@ -229,9 +235,9 @@ namespace XYZ {
 
 		void createDefaultPipelines();
 		Ref<PipelineCompute> getEffectPipeline(const Ref<MaterialAsset>& material);
-		Ref<Pipeline> getEffectPipelineRaster(const Ref<MaterialAsset>& material);
+		Ref<Pipeline>		 getEffectPipelineRaster(const Ref<MaterialAsset>& material);
 
-		MeshAllocation& createMeshAllocation(const Ref<VoxelMesh>& mesh);	
+		MeshAllocation&		 createMeshAllocation(const Ref<VoxelMesh>& mesh);	
 
 		void reallocateVoxels(const Ref<VoxelMesh>& mesh, MeshAllocation& allocation);
 

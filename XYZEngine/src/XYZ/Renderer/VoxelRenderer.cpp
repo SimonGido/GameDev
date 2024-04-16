@@ -96,12 +96,18 @@ namespace XYZ {
 	}
 	void VoxelRenderer::EndScene()
 	{
+		EndScene([]() {});
+	}
+
+	void VoxelRenderer::EndScene(const std::function<void()>& postPrepareModels)
+	{
 		prepareModels();
+		postPrepareModels();
 
 		m_CommandBuffer->Begin();
 		m_GPUTimeQueries.GPUTime = m_CommandBuffer->BeginTimestampQuery();
 
-	
+
 		effectPass();
 		clearPass();
 		renderPass();
@@ -118,6 +124,7 @@ namespace XYZ {
 
 		m_LastFrameMeshAllocations = std::move(m_MeshAllocations);
 	}
+	
 	void VoxelRenderer::SetViewportSize(uint32_t width, uint32_t height)
 	{
 		if (m_ViewportSize.x != width || m_ViewportSize.y != height)
@@ -140,6 +147,28 @@ namespace XYZ {
 		
 			result |= submitSubmesh(mesh, submesh, instanceTransform, instance.SubmeshIndex);
 		}	
+		return result;
+	}
+
+	bool VoxelRenderer::SubmitMesh(const Ref<VoxelMesh>& mesh, const glm::mat4& transform, int32_t* indices)
+	{
+		uint32_t counter = 0;
+		bool result = false;
+		const auto& submeshes = mesh->GetSubmeshes();
+		for (const auto& instance : mesh->GetInstances())
+		{
+			const glm::mat4 instanceTransform = transform * instance.Transform;
+			const VoxelSubmesh& submesh = submeshes[instance.SubmeshIndex];
+
+			bool submited = submitSubmesh(mesh, submesh, instanceTransform, instance.SubmeshIndex);
+			if (submited)
+				indices[counter] = static_cast<uint32_t>(m_RenderModels.size() - 1);
+			else
+				indices[counter] = -1;
+
+			result |= submited;
+			counter++;
+		}
 		return result;
 	}
 
@@ -342,8 +371,7 @@ namespace XYZ {
 		m_StorageBufferSet->Update((void*)&m_SSBOVoxelModels, voxelModelsUpdateSize, 0, SSBOVoxelModels::Binding, SSBOVoxelModels::Set);
 		
 	}
-
-
+	
 	bool VoxelRenderer::submitSubmesh(const Ref<VoxelMesh>& mesh, const VoxelSubmesh& submesh, const glm::mat4& transform, uint32_t submeshIndex)
 	{		
 		const uint32_t voxelCount = static_cast<uint32_t>(submesh.ColorIndices.size());
