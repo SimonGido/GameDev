@@ -38,6 +38,17 @@ namespace XYZ {
 				m_InitialMousePosition = mouse;
 				mouseRotate(delta);
 			}
+
+			float rotationSensitivity = 0.01f;
+			if (Input::IsKeyPressed(KeyCode::KEY_A))
+				m_Yaw -= rotationSensitivity;
+			if (Input::IsKeyPressed(KeyCode::KEY_D))
+				m_Yaw += rotationSensitivity;
+			if (Input::IsKeyPressed(KeyCode::KEY_W))
+				m_Pitch -= rotationSensitivity;
+			if (Input::IsKeyPressed(KeyCode::KEY_S))
+				m_Pitch += rotationSensitivity;
+
 			if (Input::IsKeyPressed(KeyCode::KEY_UP))
 				m_Position += cameraSpeed * forwardDir;
 			if (Input::IsKeyPressed(KeyCode::KEY_DOWN))
