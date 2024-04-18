@@ -8,11 +8,12 @@ namespace XYZ {
     public:
         struct CollisionResult
         {
-            glm::vec3 CollisionNormal;
-            bool      Collide;
+            uint32_t  VoxelIndex = 0;
+            uint32_t  CellIndex = 0;
+            bool      Collide = false;
         };
 
-        static CollisionResult IsCollision(const glm::vec3& point, const VoxelSubmesh& submesh);
+        static CollisionResult IsCollision(const glm::vec3& point, const VoxelSubmesh& submesh, const glm::mat4& transform);
 
     private:
 

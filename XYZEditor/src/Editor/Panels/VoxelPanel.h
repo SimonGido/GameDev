@@ -17,6 +17,7 @@
 
 #include "Editor/EditorPanel.h"
 #include "Editor/EditorCamera.h"
+#include "Editor/FreeFlyCamera.h"
 
 #include "XYZ/Utils/Algorithms/SpaceColonization.h"
 
@@ -81,6 +82,7 @@ namespace XYZ {
 			bool m_ViewportFocused;
 			bool m_ViewportHovered;
 
+			FreeFlyCamera m_FreeFlyCamera;
 			EditorCamera m_EditorCamera;
 			
 			std::vector<TransformComponent> m_TreeTransforms;

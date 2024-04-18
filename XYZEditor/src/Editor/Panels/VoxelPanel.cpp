@@ -14,7 +14,7 @@
 #include "XYZ/Utils/Math/Perlin.h"
 #include "XYZ/Utils/Random.h"
 #include "XYZ/Utils/Algorithms/Raymarch.h"
-
+#include "XYZ/Voxel/VoxelMeshCollision.h"
 
 #include "XYZ/ImGui/ImGui.h"
 
@@ -89,6 +89,7 @@ namespace XYZ {
 			EditorPanel(std::forward<std::string>(name)),
 			m_ViewportSize(0.0f),
 			m_EditorCamera(30.0f, 1.778f, 0.1f, 10000.0f),
+			m_FreeFlyCamera(30.0f, 1.778f, 0.1f, 10000.0f),
 			m_Octree(AABB(glm::vec3(0.0f), glm::vec3(0.0f)), 10),
 			m_World("blabla", 50)
 		{
@@ -242,9 +243,9 @@ namespace XYZ {
 		{
 			if (m_VoxelRenderer.Raw())
 			{			
-				m_EditorCamera.OnUpdate(ts);
+				m_FreeFlyCamera.OnUpdate(ts);
 				
-				const glm::mat4 mvp = m_EditorCamera.GetViewProjection();
+				const glm::mat4 mvp = m_FreeFlyCamera.GetViewProjection();
 				
 				if (!m_Generating && m_GenerateVoxelsFuture.valid())
 				{
@@ -255,11 +256,11 @@ namespace XYZ {
 				}
 
 				m_VoxelRenderer->BeginScene({
-					m_EditorCamera.GetViewProjection(),
-					m_EditorCamera.GetViewMatrix(),
-					m_EditorCamera.GetProjectionMatrix(),
-					m_EditorCamera.GetPosition(),
-					m_EditorCamera.CreateFrustum()
+					m_FreeFlyCamera.GetViewProjection(),
+					m_FreeFlyCamera.GetViewMatrix(),
+					m_FreeFlyCamera.GetProjectionMatrix(),
+					m_FreeFlyCamera.GetPosition(),
+					m_FreeFlyCamera.CreateFrustum()
 				});
 				
 				if (Input::IsKeyPressed(KeyCode::KEY_SPACE))
@@ -271,7 +272,7 @@ namespace XYZ {
 					//	m_ProceduralMesh->SetVoxelColor(0, 256, y, 256, RandomNumber(5u, 255u));
 					//}
 				}
-				//m_World.Update(m_EditorCamera.GetPosition());
+				//m_World.Update(m_FreeFlyCamera.GetPosition());
 				m_World.Update(glm::vec3(0));
 
 				std::vector<Ref<VoxelMesh>> newMeshes;
@@ -335,7 +336,7 @@ namespace XYZ {
 		bool VoxelPanel::OnEvent(Event& event)
 		{
 			if (m_ViewportHovered && m_ViewportFocused)
-				m_EditorCamera.OnEvent(event);
+				m_FreeFlyCamera.OnEvent(event);
 
 			if (event.GetEventType() == EventType::KeyPressed)
 			{
@@ -406,7 +407,7 @@ namespace XYZ {
 			if (m_ViewportSize.x != newSize.x || m_ViewportSize.y != newSize.y)
 			{
 				m_ViewportSize = newSize;
-				m_EditorCamera.SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
+				m_FreeFlyCamera.SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
 				m_VoxelRenderer->SetViewportSize(static_cast<uint32_t>(m_ViewportSize.x), static_cast<uint32_t>(m_ViewportSize.y));
 			}
 		}
