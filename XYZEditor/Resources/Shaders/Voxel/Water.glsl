@@ -70,18 +70,21 @@ layout(std430, binding = 19) readonly buffer buffer_Colors
 	uint ColorPallete[MAX_COLORS][256];
 };
 
-layout(std430, binding = 20) readonly buffer buffer_TopGrids
+
+layout(std430, binding = 21) buffer buffer_WaterDensity
 {		
-	uint8_t TopGridCells[];
+	uint8_t WaterDensity[];
 };
 
 layout(push_constant) uniform Uniforms
 {
-	uint Random;
+	uint RandomSeed;
 	uint ModelIndex;
+	uint EmptyColorIndex;
 	uint WaterColorIndex;
-	int Stage;
-	int HeightStage;
+	uint MaxDensity;
+	int  Stage;
+	int  HeightStage;
 
 } u_Uniforms;
 
@@ -108,40 +111,32 @@ bool IsValidVoxel(ivec3 voxel, uint width, uint height, uint depth)
 		 && (voxel.z < depth && voxel.z >= 0));
 }
 
-bool IsWater(ivec3 index)
+bool IsWater(ivec3 index, in VoxelModel model)
 {
-	uint width = Models[u_Uniforms.ModelIndex].Width;
-	uint height = Models[u_Uniforms.ModelIndex].Height;
-	uint depth = Models[u_Uniforms.ModelIndex].Depth;
-
-	if (!IsValidVoxel(index, width, height, depth))
+	if (!IsValidVoxel(index, model.Width, model.Height, model.Depth))
 		return false;
 
-	uint voxel = Index3D(index, width, height) + Models[u_Uniforms.ModelIndex].VoxelOffset;
+	uint voxel = Index3D(index, model.Width, model.Height) + model.VoxelOffset;
 	uint colorIndex = uint(Voxels[voxel]);
 	return colorIndex == u_Uniforms.WaterColorIndex;
 }
 
 
-bool IsFilledVoxel(ivec3 index)
+bool IsFilledVoxel(ivec3 index, in VoxelModel model)
 {
-	uint width = Models[u_Uniforms.ModelIndex].Width;
-	uint height = Models[u_Uniforms.ModelIndex].Height;
-	uint depth = Models[u_Uniforms.ModelIndex].Depth;
-
-	if (!IsValidVoxel(index, width, height, depth))
+	if (!IsValidVoxel(index, model.Width, model.Height, model.Depth))
 		return true;
 
-	uint voxel = Index3D(index, width, height) + Models[u_Uniforms.ModelIndex].VoxelOffset;
+	uint voxel = Index3D(index, model.Width, model.Height) + model.VoxelOffset;
 	uint colorIndex = uint(Voxels[voxel]);
-	uint color = ColorPallete[Models[u_Uniforms.ModelIndex].ColorIndex][colorIndex];
+	uint color = ColorPallete[model.ColorIndex][colorIndex];
 	uint alpha = VoxelAlpha(color);
 	return alpha != 0;
 }
 
 bool TryMoveVoxel(ivec3 index, ivec3 newIndex, in VoxelModel model)
 {
-	if (!IsFilledVoxel(newIndex))
+	if (!IsFilledVoxel(newIndex, model))
 	{				
 		uint voxelIndex = Index3D(index, model.Width, model.Height) + model.VoxelOffset;
 		uint newVoxelIndex = Index3D(newIndex, model.Width, model.Height) + model.VoxelOffset;
@@ -179,7 +174,16 @@ void main()
 	index.z = stageOffsets[u_Uniforms.Stage].y + index.z * 3;
 	index.y = u_Uniforms.HeightStage + index.y * 2;
 
-	if (IsWater(index))
+	uint index3D = Index3D(index, model.Width, model.Height) + model.VoxelOffset;
+	if (IsValidVoxel(index, model.Width, model.Height, model.Depth))
+	{
+		if (uint(WaterDensity[index3D]) != 0) 
+		{
+			// It has some density => it is water
+			Voxels[index3D] = uint8_t(u_Uniforms.WaterColorIndex);
+		}
+	}
+	if (IsWater(index, model))
 	{
 		ivec3 downIndex = ivec3(index.x, index.y - 1, index.z);
 		ivec3 leftIndex = ivec3(index.x - 1, index.y, index.z);
@@ -187,27 +191,47 @@ void main()
 		ivec3 frontIndex = ivec3(index.x, index.y, index.z + 1);
 		ivec3 backIndex = ivec3(index.x, index.y, index.z - 1);
 		
-
-		if (!TryMoveVoxel(index, downIndex, model))
+		if (uint(WaterDensity[index3D]) == 0) 
 		{
-			if (u_Uniforms.Random != 0)
+			// No water density => it is not water
+			Voxels[index3D] = uint8_t(u_Uniforms.EmptyColorIndex);		
+		}
+		
+		ivec3 neighbours[5] = {
+			downIndex,
+			leftIndex,
+			rightIndex,
+			frontIndex,
+			backIndex
+		};
+
+		float seed = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y + float(u_Uniforms.RandomSeed);
+		if (Random(0.0, 10.0, seed) < 5.0)
+		{
+			neighbours[1] = backIndex;
+			neighbours[2] = frontIndex;
+			neighbours[3] = rightIndex;
+			neighbours[4] = leftIndex;
+		}
+		
+
+		int outcomingDensity = int(WaterDensity[index3D]);
+		
+		for (int i = 0; i < 5 /* num neighbours */; i++)
+		{
+			if (outcomingDensity == 0)
+				break;
+
+			if (!IsFilledVoxel(neighbours[i], model) || IsWater(neighbours[i], model))
 			{
-				if (!TryMoveVoxel(index, leftIndex, model))
+				uint neighbourIndex3D = Index3D(neighbours[i], model.Width, model.Height) + model.VoxelOffset;
+				if (uint(WaterDensity[neighbourIndex3D]) != u_Uniforms.MaxDensity)
 				{
-					if (!TryMoveVoxel(index, frontIndex, model))
-					{
-						TryMoveVoxel(index, backIndex, model);					
-					}
+					WaterDensity[neighbourIndex3D]++;
+					WaterDensity[index3D]--;
+					outcomingDensity--;
 				}
 			}
-			else if (!TryMoveVoxel(index, rightIndex, model))
-			{
-				if (!TryMoveVoxel(index, frontIndex, model))
-				{
-					TryMoveVoxel(index, backIndex, model);
-					
-				}
-			}			
-		}	
+		}
 	}
 }

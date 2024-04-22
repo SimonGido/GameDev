@@ -163,7 +163,7 @@ namespace XYZ {
 			}
 			pushGenerateVoxelMeshJob();
 
-			Ref<Shader> waterShader = Shader::Create("Resources/Shaders/Voxel/WaterTest.glsl");
+			Ref<Shader> waterShader = Shader::Create("Resources/Shaders/Voxel/Water.glsl");
 			Ref<ShaderAsset> waterShaderAsset = Ref<ShaderAsset>::Create(waterShader);
 			m_WaterMaterial = Ref<MaterialAsset>::Create(waterShaderAsset);
 		}
@@ -489,7 +489,6 @@ namespace XYZ {
 					{
 						m_VoxelRenderer->SubmitEffect(
 							m_WaterMaterial,
-							true,
 							workGroups,
 							PushConstBuffer
 							{

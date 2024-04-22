@@ -63,8 +63,8 @@ namespace XYZ {
 		m_PositionTexture = Texture2D::Create(ImageFormat::RGBA32F, 1280, 720, nullptr, props);
 		m_DepthTexture = Texture2D::Create(ImageFormat::RED32F, 1280, 720, nullptr, props);
 		m_SSGITexture = Texture2D::Create(ImageFormat::RGBA16F, 1280, 720, nullptr, props);
+		createRenderPass();
 		createDefaultPipelines();
-
 
 		m_UBVoxelScene.DirectionalLight.Direction = { -0.2f, -1.4f, -1.5f };
 		m_UBVoxelScene.DirectionalLight.Radiance = glm::vec3(1.0f);
@@ -88,6 +88,7 @@ namespace XYZ {
 		m_RenderModels.clear();
 		m_VoxelMeshBuckets.clear();
 		m_EffectCommands.clear();
+		m_RenderCommands.clear();
 
 		m_Statistics = {};
 
@@ -110,6 +111,7 @@ namespace XYZ {
 
 		effectPass();
 		clearPass();
+		raymarchPass();
 		renderPass();
 		lightPass();
 		if (m_UseSSGI)
@@ -191,6 +193,7 @@ namespace XYZ {
 
 	Ref<Image2D> VoxelRenderer::GetFinalPassImage() const
 	{
+		//return m_RenderPass->GetSpecification().TargetFramebuffer->GetImage();
 		if (m_Debug)
 			return m_DebugRenderer->GetFinalImage();
 		if (m_UseSSGI)
@@ -223,15 +226,24 @@ namespace XYZ {
 		return false;
 	}
 	
-	void VoxelRenderer::SubmitEffect(const Ref<MaterialAsset>& material, bool isCompute, const glm::ivec3& workGroups, const PushConstBuffer& constants)
+	void VoxelRenderer::SubmitEffect(const Ref<MaterialAsset>& material,const glm::ivec3& workGroups, const PushConstBuffer& constants)
 	{
 		auto& effectCommand = m_EffectCommands[material->GetHandle()];
-		effectCommand.IsCompute = isCompute;
 		effectCommand.Material = material;
 		auto& invocation = effectCommand.Invocations.emplace_back();
 		invocation.WorkGroups = workGroups;
 		invocation.Constants = constants;
 	}
+
+	void VoxelRenderer::SubmitRenderCommand(const Ref<MaterialAsset>& material, const Ref<Mesh>& mesh, const glm::mat4& transform, uint32_t instanceCount)
+	{
+		auto& renderCommand = m_RenderCommands[material->GetHandle()];
+		renderCommand.Material = material;
+		auto& data = renderCommand.Data.emplace_back();
+		data.Mesh = mesh;
+		data.Transform = transform;
+	}
+
 
 	void VoxelRenderer::OnImGuiRender()
 	{
@@ -438,37 +450,8 @@ namespace XYZ {
 
 	void VoxelRenderer::effectPass()
 	{
-		auto ssboBarrier = [](Ref<VulkanPipelineCompute> pipeline, Ref<VulkanStorageBufferSet> storageBufferSet) {
-
-			Renderer::Submit([pipeline, storageBufferSet]() {
-				uint32_t frameIndex = Renderer::GetCurrentFrame();
-				auto storageBuffer = storageBufferSet->Get(SSBOVoxels::Binding, SSBOVoxels::Set, frameIndex).As<VulkanStorageBuffer>();
-				VkBufferMemoryBarrier bufferBarrier = {};
-				bufferBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-				bufferBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT; // Access mask for the source stage
-				bufferBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;  // Access mask for the destination stage
-				bufferBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				bufferBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				bufferBarrier.buffer = storageBuffer->GetVulkanBuffer();  // The SSBO buffer
-				bufferBarrier.offset = 0;                // Offset in the buffer
-				bufferBarrier.size = VK_WHOLE_SIZE;      // Size of the buffer
-				vkCmdPipelineBarrier(
-					pipeline->GetActiveCommandBuffer(),                   // The command buffer
-					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,  // Source pipeline stage
-					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,  // Destination pipeline stage
-					0,                               // Dependency flags
-					0, nullptr,                      // Memory barriers (global memory barriers)
-					1, &bufferBarrier,               // Buffer memory barriers
-					0, nullptr                       // Image memory barriers
-				);
-				});
-		};
-
-
 		for (auto& [key, effect] : m_EffectCommands)
 		{
-			
-
 			Ref<PipelineCompute> pipeline = getEffectPipeline(effect.Material);
 			Renderer::BeginPipelineCompute(
 				m_CommandBuffer,
@@ -486,7 +469,7 @@ namespace XYZ {
 					invoc.WorkGroups.x, invoc.WorkGroups.y, invoc.WorkGroups.z,
 					invoc.Constants
 				);
-				ssboBarrier(pipeline, m_StorageBufferSet);
+				ssboBarrier(pipeline);
 			}
 
 			Renderer::EndPipelineCompute(pipeline);
@@ -495,7 +478,7 @@ namespace XYZ {
 
 
 
-	void VoxelRenderer::renderPass()
+	void VoxelRenderer::raymarchPass()
 	{
 		Renderer::BeginPipelineCompute(
 			m_CommandBuffer,
@@ -523,6 +506,36 @@ namespace XYZ {
 		imageBarrier(m_RaymarchPipeline, m_DepthTexture->GetImage());
 
 		Renderer::EndPipelineCompute(m_RaymarchPipeline);		
+	}
+	void VoxelRenderer::renderPass()
+	{
+		Renderer::BeginRenderPass(m_CommandBuffer, m_RenderPass, false, true);
+
+		for (auto& [key, cmd] : m_RenderCommands)
+		{
+			Ref<Pipeline> pipeline = getEffectPipelineRaster(cmd.Material);
+			Renderer::BindPipeline(
+				m_CommandBuffer,
+				pipeline,
+				m_UniformBufferSet,
+				m_StorageBufferSet,
+				cmd.Material->GetMaterial()
+			);
+
+			//Renderer::RenderMesh(
+			//	m_CommandBuffer,
+			//	pipeline,
+			//	cmd.Material->GetMaterialInstance(),
+			//	cmd.Mesh->GetVertexBuffer(),
+			//	cmd.Mesh->GetIndexBuffer(),
+			//	cmd.Transform,
+			//	m_InstanceVertexBufferSet,
+			//	command.InstanceOffset,
+			//	command.InstanceCount
+			//);
+		}
+
+		Renderer::EndRenderPass(m_CommandBuffer);
 	}
 	void VoxelRenderer::ssgiPass()
 	{
@@ -602,6 +615,32 @@ namespace XYZ {
 				0, nullptr,
 				0, nullptr,
 				1, &imageMemoryBarrier);
+			});
+	}
+
+	void VoxelRenderer::ssboBarrier(Ref<PipelineCompute> pipeline)
+	{
+		Renderer::Submit([vulkanPipeline = pipeline.As<VulkanPipelineCompute>(), storageBufferSet = m_StorageBufferSet]() {
+			uint32_t frameIndex = Renderer::GetCurrentFrame();
+			auto storageBuffer = storageBufferSet->Get(SSBOVoxels::Binding, SSBOVoxels::Set, frameIndex).As<VulkanStorageBuffer>();
+			VkBufferMemoryBarrier bufferBarrier = {};
+			bufferBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+			bufferBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT; // Access mask for the source stage
+			bufferBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;  // Access mask for the destination stage
+			bufferBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			bufferBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			bufferBarrier.buffer = storageBuffer->GetVulkanBuffer();  // The SSBO buffer
+			bufferBarrier.offset = 0;                // Offset in the buffer
+			bufferBarrier.size = VK_WHOLE_SIZE;      // Size of the buffer
+			vkCmdPipelineBarrier(
+				vulkanPipeline->GetActiveCommandBuffer(),                   // The command buffer
+				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,  // Source pipeline stage
+				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,  // Destination pipeline stage
+				0,                               // Dependency flags
+				0, nullptr,                      // Memory barriers (global memory barriers)
+				1, &bufferBarrier,               // Buffer memory barriers
+				0, nullptr                       // Image memory barriers
+			);
 			});
 	}
 
@@ -831,6 +870,7 @@ namespace XYZ {
 		PipelineSpecification spec;
 		spec.Shader = material->GetShader();
 		spec.Topology = PrimitiveTopology::Triangles;
+		spec.RenderPass = m_RenderPass;
 		spec.DepthTest = true;
 		spec.DepthWrite = true;
 		spec.BackfaceCulling = true;
@@ -941,5 +981,20 @@ namespace XYZ {
 		}
 	
 	}
-	
+
+	void VoxelRenderer::createRenderPass()
+	{
+		FramebufferSpecification compFramebufferSpec;
+		compFramebufferSpec.ClearColor = { 0.1f, 0.1f, 0.1f, 1.0f };
+		compFramebufferSpec.SwapChainTarget = false;
+		compFramebufferSpec.ClearOnLoad = false;
+		compFramebufferSpec.Attachments = { ImageFormat::RGBA, ImageFormat::Depth };
+
+		Ref<Framebuffer> framebuffer = Framebuffer::Create(compFramebufferSpec);
+
+		RenderPassSpecification renderPassSpec;
+		renderPassSpec.TargetFramebuffer = framebuffer;
+		m_RenderPass = RenderPass::Create(renderPassSpec);
+	}
+
 }

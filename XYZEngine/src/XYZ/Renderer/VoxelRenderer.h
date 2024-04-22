@@ -7,6 +7,7 @@
 #include "VoxelMesh.h"
 #include "Material.h"
 
+
 #include "XYZ/Scene/Scene.h"
 #include "XYZ/Utils/DataStructures/BVH.h"
 #include "XYZ/Utils/DataStructures/AABBGrid.h"
@@ -150,13 +151,14 @@ namespace XYZ {
 		bool SubmitMesh(const Ref<VoxelMesh>& mesh, const glm::mat4& transform, int32_t* indices);
 		bool SubmitMesh(const Ref<VoxelMesh>& mesh, const glm::mat4& transform, const uint32_t* keyFrames);
 
-		void SubmitEffect(const Ref<MaterialAsset>& material, bool isCompute, const glm::ivec3& workGroups, const PushConstBuffer& constants);
+		void SubmitEffect(const Ref<MaterialAsset>& material, const glm::ivec3& workGroups, const PushConstBuffer& constants);
+		void SubmitRenderCommand(const Ref<MaterialAsset>& material, const Ref<Mesh>& mesh, const glm::mat4& transform, uint32_t instanceCount);
 
 		void OnImGuiRender();
 
 		bool CreateComputeAllocation(uint32_t size, StorageBufferAllocation& allocation);
 		void SubmitComputeData(const void* data, uint32_t size, uint32_t offset, const StorageBufferAllocation& allocation, bool allFrames = false);
-
+	
 		bool IsMeshAllocated(const Ref<VoxelMesh>& mesh) const;
 		const VoxelRenderModel& GetVoxelRenderModel(uint32_t index) const { return m_RenderModels[index]; }
 
@@ -181,8 +183,19 @@ namespace XYZ {
 		struct VoxelEffectCommand
 		{
 			Ref<MaterialAsset> Material;
-			bool IsCompute;
 			std::vector<VoxelEffectInvocation> Invocations;
+		};
+
+		struct RenderCommandData
+		{
+			Ref<Mesh> Mesh;
+			glm::mat4 Transform;
+		};
+
+		struct RenderCommand
+		{
+			Ref<MaterialAsset> Material;
+			std::vector<RenderCommandData> Data;
 		};
 
 		struct SSGIValues
@@ -219,12 +232,14 @@ namespace XYZ {
 		void clearPass();
 		void lightPass();
 		void effectPass();
+		void raymarchPass();
 		void renderPass();
 		void ssgiPass();
 
 		void debugPass();
 		
 		void imageBarrier(Ref<PipelineCompute> pipeline, Ref<Image2D> image);
+		void ssboBarrier(Ref<PipelineCompute> pipeline);
 
 		void updateViewportSize();
 		void updateUniformBufferSet();
@@ -241,9 +256,12 @@ namespace XYZ {
 
 		void reallocateVoxels(const Ref<VoxelMesh>& mesh, MeshAllocation& allocation);
 
+		void createRenderPass();
+
+
 	private:
 		Ref<PrimaryRenderCommandBuffer> m_CommandBuffer;
-
+		Ref<RenderPass>			m_RenderPass;
 		Ref<PipelineCompute>	m_RaymarchPipeline;
 		Ref<Material>			m_RaymarchMaterial;
 
@@ -267,6 +285,7 @@ namespace XYZ {
 		Ref<StorageBufferAllocator> m_CompressedCellAllocator;
 		Ref<StorageBufferAllocator> m_ColorStorageAllocator;
 		Ref<StorageBufferAllocator> m_ComputeStorageAllocator;
+
 
 		Ref<Texture2D>			m_OutputTexture;
 		Ref<Texture2D>			m_NormalTexture;
@@ -298,13 +317,15 @@ namespace XYZ {
 		std::vector<VoxelRenderModel>					 m_RenderModels;
 		std::unordered_map<AssetHandle, VoxelMeshBucket> m_VoxelMeshBuckets;
 		std::map<AssetHandle, VoxelEffectCommand>		 m_EffectCommands;
+		std::map<AssetHandle, RenderCommand>			 m_RenderCommands;
+
 
 		std::unordered_map<AssetHandle, MeshAllocation> m_MeshAllocations;
 		std::unordered_map<AssetHandle, MeshAllocation> m_LastFrameMeshAllocations;
 
 		std::unordered_map<AssetHandle, Ref<PipelineCompute>> m_EffectPipelines;
-		std::unordered_map<AssetHandle, Ref<Pipeline>> m_EffectPipelinesRaster;
-	
+		std::unordered_map<AssetHandle, Ref<Pipeline>>		  m_EffectPipelinesRaster;
+
 		struct GPUTimeQueries
 		{
 			uint32_t GPUTime = 0;
