@@ -235,6 +235,7 @@ namespace XYZ {
 		void effectPass();
 		void raymarchPass();
 		void renderPass();
+		void postRasterPass();
 		void ssgiPass();
 
 		void debugPass();
@@ -258,13 +259,20 @@ namespace XYZ {
 		void reallocateVoxels(const Ref<VoxelMesh>& mesh, MeshAllocation& allocation);
 
 		void createRenderPass();
-
+		void createPostRasterRenderPass();
+		void createPostRasterPipeline();
 
 	private:
 		Ref<PrimaryRenderCommandBuffer> m_CommandBuffer;
 		Ref<RenderPass>			m_RenderPass;
 		Ref<PipelineCompute>	m_RaymarchPipeline;
 		Ref<Material>			m_RaymarchMaterial;
+
+		Ref<RenderPass>			m_PostRasterRenderPass;
+		Ref<Pipeline>			m_PostRasterPipeline;
+		Ref<Material>			m_PostRasterMaterial;
+		Ref<MaterialInstance>	m_PostRasterMaterialInstance;
+
 
 		Ref<PipelineCompute>	m_ClearPipeline;
 		Ref<Material>			m_ClearMaterial;

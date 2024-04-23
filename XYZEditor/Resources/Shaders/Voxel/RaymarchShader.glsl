@@ -109,7 +109,7 @@ layout(binding = 25, rgba32f) uniform image2D o_Position;
 
 // Helper functions
 
-const float FarClip = 1000.0;
+const float FarClip = 10000.0;
 const float NearClip = 0.1;
 
 float DistToDepth(float dist)

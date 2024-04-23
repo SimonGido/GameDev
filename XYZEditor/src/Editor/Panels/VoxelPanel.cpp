@@ -416,7 +416,7 @@ namespace XYZ {
 			{
 				for (uint32_t z = 0; z < 512; z++)
 				{
-					grassPositions.push_back({ x * 10, 0, z * 10, 0 });
+					grassPositions.push_back({ x * 10, 40, z * 10, 0 });
 				}
 			}
 

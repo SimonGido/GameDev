@@ -32,6 +32,8 @@ namespace XYZ {
 			const glm::vec3 upDir = GetUpDirection();
 			const glm::quat orientation = GetOrientation();
 
+			if (Input::IsKeyPressed(KeyCode::KEY_LEFT_SHIFT))
+				cameraSpeed *= 3;
 
 
 			if (Input::IsKeyPressed(KeyCode::KEY_A))

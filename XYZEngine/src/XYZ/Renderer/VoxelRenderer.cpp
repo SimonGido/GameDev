@@ -64,7 +64,9 @@ namespace XYZ {
 		m_DepthTexture = Texture2D::Create(ImageFormat::RED32F, 1280, 720, nullptr, props);
 		m_SSGITexture = Texture2D::Create(ImageFormat::RGBA16F, 1280, 720, nullptr, props);
 		createRenderPass();
+		createPostRasterRenderPass();
 		createDefaultPipelines();
+		createPostRasterPipeline();
 
 		m_UBVoxelScene.DirectionalLight.Direction = { -0.2f, -1.4f, -1.5f };
 		m_UBVoxelScene.DirectionalLight.Radiance = glm::vec3(1.0f);
@@ -112,6 +114,7 @@ namespace XYZ {
 		effectPass();
 		clearPass();
 		renderPass();
+		postRasterPass();
 		raymarchPass();
 		lightPass();
 		if (m_UseSSGI)
@@ -526,11 +529,6 @@ namespace XYZ {
 		for (auto& [key, cmd] : m_RenderCommands)
 		{
 			Ref<Pipeline> pipeline = getEffectPipelineRaster(cmd.Material);
-			cmd.Material->GetMaterial()->SetImage("o_Image", m_OutputTexture->GetImage());
-			cmd.Material->GetMaterial()->SetImage("o_DepthImage", m_DepthTexture->GetImage());
-			cmd.Material->GetMaterial()->SetImage("o_Normal", m_NormalTexture->GetImage());
-			cmd.Material->GetMaterial()->SetImage("o_Position", m_PositionTexture->GetImage());
-
 			Renderer::BindPipeline(
 				m_CommandBuffer,
 				pipeline,
@@ -554,7 +552,23 @@ namespace XYZ {
 			}
 			
 		}
+	
+		Renderer::EndRenderPass(m_CommandBuffer);
+	}
+	void VoxelRenderer::postRasterPass()
+	{
+		Renderer::BeginRenderPass(m_CommandBuffer, m_PostRasterRenderPass, false, false);
 
+		Renderer::BindPipeline(
+			m_CommandBuffer,
+			m_PostRasterPipeline,
+			m_UniformBufferSet,
+			m_StorageBufferSet,
+			m_PostRasterMaterial
+		);
+
+		Renderer::SubmitFullscreenQuad(m_CommandBuffer, m_PostRasterPipeline, m_PostRasterMaterialInstance, glm::mat4(1.0f));
+		
 		Renderer::EndRenderPass(m_CommandBuffer);
 	}
 	void VoxelRenderer::ssgiPass()
@@ -680,6 +694,16 @@ namespace XYZ {
 			m_SSGITexture = Texture2D::Create(ImageFormat::RGBA16F, m_ViewportSize.x, m_ViewportSize.y, nullptr, props);
 			
 			m_RenderPass->GetSpecification().TargetFramebuffer->Resize(m_ViewportSize.x, m_ViewportSize.y);
+			m_PostRasterRenderPass->GetSpecification().TargetFramebuffer->Resize(m_ViewportSize.x, m_ViewportSize.y);
+
+			auto rasterImage = m_RenderPass->GetSpecification().TargetFramebuffer->GetImage();
+			auto depthImage = m_RenderPass->GetSpecification().TargetFramebuffer->GetDepthImage();
+
+			m_PostRasterMaterial->SetImage("u_RasterImage", rasterImage);
+			m_PostRasterMaterial->SetImage("u_RasterDepthImage", depthImage);
+
+			m_PostRasterMaterial->SetImage("o_Image", m_OutputTexture->GetImage());
+			m_PostRasterMaterial->SetImage("o_DepthImage", m_DepthTexture->GetImage());
 
 			m_RaymarchMaterial->SetImage("o_Image", m_OutputTexture->GetImage());
 			m_RaymarchMaterial->SetImage("o_DepthImage", m_DepthTexture->GetImage());
@@ -1015,7 +1039,7 @@ namespace XYZ {
 		colorAttachment.Format = ImageFormat::RGBA32F;
 
 		FramebufferTextureSpecification depthAttachment;
-		depthAttachment.Format = ImageFormat::Depth;
+		depthAttachment.Format = ImageFormat::DEPTH32F;
 
 
 		compFramebufferSpec.Attachments = { colorAttachment, depthAttachment };
@@ -1025,6 +1049,46 @@ namespace XYZ {
 		RenderPassSpecification renderPassSpec;
 		renderPassSpec.TargetFramebuffer = framebuffer;
 		m_RenderPass = RenderPass::Create(renderPassSpec);
+	}
+
+	void VoxelRenderer::createPostRasterRenderPass()
+	{
+		FramebufferSpecification compFramebufferSpec;
+		compFramebufferSpec.ClearColor = { 0.1f, 0.1f, 0.1f, 1.0f };
+		compFramebufferSpec.SwapChainTarget = false;
+		compFramebufferSpec.ClearOnLoad = false;
+		compFramebufferSpec.Attachments = { };
+		Ref<Framebuffer> framebuffer = Framebuffer::Create(compFramebufferSpec);
+
+		RenderPassSpecification renderPassSpec;
+		renderPassSpec.TargetFramebuffer = framebuffer;
+		m_PostRasterRenderPass = RenderPass::Create(renderPassSpec);
+	}
+
+	void VoxelRenderer::createPostRasterPipeline()
+	{
+		Ref<Shader> postRasterShader = Shader::Create("Resources/Shaders/Voxel/PostRasterShader.glsl");
+		m_PostRasterMaterial = Material::Create(postRasterShader);
+		m_PostRasterMaterialInstance = m_PostRasterMaterial->CreateMaterialInstance();
+
+		PipelineSpecification spec;
+		spec.Shader = m_PostRasterMaterial->GetShader();
+		spec.Topology = PrimitiveTopology::Triangles;
+		spec.RenderPass = m_PostRasterRenderPass;
+		spec.DepthTest = false;
+		spec.DepthWrite = false;
+		spec.BackfaceCulling = true;
+
+		m_PostRasterPipeline = Pipeline::Create(spec);
+
+		auto rasterImage = m_RenderPass->GetSpecification().TargetFramebuffer->GetImage();
+		auto depthImage = m_RenderPass->GetSpecification().TargetFramebuffer->GetDepthImage();
+
+		m_PostRasterMaterial->SetImage("u_RasterImage", rasterImage);
+		m_PostRasterMaterial->SetImage("u_RasterDepthImage", depthImage);
+
+		m_PostRasterMaterial->SetImage("o_Image", m_OutputTexture->GetImage());
+		m_PostRasterMaterial->SetImage("o_DepthImage", m_DepthTexture->GetImage());
 	}
 
 }

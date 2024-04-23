@@ -72,26 +72,9 @@ struct VertexOutput
 };
 layout(location = 0) in VertexOutput v_Input;
 
-layout(binding = 0, rgba32f) uniform image2D o_Image;
-layout(binding = 1, r32f) uniform image2D o_DepthImage;
-layout(binding = 2, rgba32f) uniform image2D o_Normal;
-layout(binding = 3, rgba32f) uniform image2D o_Position;
-
 layout(location = 0) out vec4 o_Color;
-
-const float FarClip = 1000.0;
-const float NearClip = 0.1;
 
 void main()
 {
-	ivec2 pixel = ivec2(gl_FragCoord.xy);
-	float dist = imageLoad(o_DepthImage, pixel).r;
-	if (dist > v_Input.Depth)
-	{
-		imageStore(o_Image, pixel, v_Input.Color);
-		imageStore(o_Normal, pixel, vec4(v_Input.Normal, 1.0));
-		imageStore(o_Position, pixel, vec4(v_Input.Position, 1.0));
-		imageStore(o_DepthImage, pixel, vec4(v_Input.Depth, 0.0, 0.0, 1.0));
-	}
 	o_Color = v_Input.Color;
 }
