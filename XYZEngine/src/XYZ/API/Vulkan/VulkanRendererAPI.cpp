@@ -333,7 +333,7 @@ namespace XYZ {
 		});
 	}
 
-	void VulkanRendererAPI::RenderMesh(Ref<RenderCommandBuffer> renderCommandBuffer, Ref<Pipeline> pipeline, Ref<MaterialInstance> material, Ref<VertexBuffer> vertexBuffer, Ref<IndexBuffer> indexBuffer, const PushConstBuffer& constData, Ref<StorageBufferSet> instanceBuffer, uint32_t set, uint32_t binding, uint32_t instanceOffset, uint32_t instanceCount)
+	void VulkanRendererAPI::RenderMesh(Ref<RenderCommandBuffer> renderCommandBuffer, Ref<Pipeline> pipeline, Ref<MaterialInstance> material, Ref<VertexBuffer> vertexBuffer, Ref<IndexBuffer> indexBuffer, const PushConstBuffer& constData, uint32_t instanceOffset, uint32_t instanceCount)
 	{
 		XYZ_ASSERT(material.Raw(), "");
 
@@ -341,7 +341,7 @@ namespace XYZ {
 
 		Renderer::Submit([renderCommandBuffer, pipeline, material,
 			vertexBuffer, indexBuffer, vsData = constData,
-			instanceBuffer, instanceOffset, instanceCount, binding, set,
+			instanceOffset, instanceCount,
 			fsUniformStorage
 		]() mutable
 			{
@@ -350,7 +350,6 @@ namespace XYZ {
 				const uint32_t frameIndex = VulkanContext::Get()->GetSwapChain().GetCurrentBufferIndex();
 
 				Ref<VulkanVertexBuffer>		   vulkanVertexBuffer = vertexBuffer.As<VulkanVertexBuffer>();
-				Ref<VulkanStorageBuffer>	   vulkanInstanceBuffer = instanceBuffer->Get(binding, set, frameIndex).As<VulkanStorageBuffer>();
 				Ref<VulkanIndexBuffer>		   vulkanIndexBuffer = indexBuffer;
 
 				Ref<VulkanShader>			   vulkanShader = pipeline->GetSpecification().Shader;
@@ -367,12 +366,6 @@ namespace XYZ {
 				VkDeviceSize offsets[1] = { 0 };
 				VkDeviceSize sizes[1] = { vulkanVertexBuffer->GetUseSize() };
 				vkCmdBindVertexBuffers2(commandBuffer, 0, 1, &vbVertexBuffer, offsets, sizes, nullptr);
-
-				// Instance Buffer
-				VkBuffer vbInstanceBuffer = vulkanInstanceBuffer->GetVulkanBuffer();
-				VkDeviceSize instanceOffsets[1] = { instanceOffset };
-				VkDeviceSize instanceBufferSizes[1] = { vulkanInstanceBuffer->GetSize() - instanceOffset};
-				vkCmdBindVertexBuffers2(commandBuffer, 1, 1, &vbInstanceBuffer, instanceOffsets, instanceBufferSizes, nullptr);
 
 				// Index buffer
 				vkCmdBindIndexBuffer(commandBuffer, vulkanIndexBuffer->GetVulkanBuffer(), 0, vulkanIndexBuffer->GetVulkanIndexType());

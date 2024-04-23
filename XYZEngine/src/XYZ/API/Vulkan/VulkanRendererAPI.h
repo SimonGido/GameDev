@@ -31,7 +31,7 @@ namespace XYZ {
 		virtual void RenderMesh(
 			Ref<RenderCommandBuffer> renderCommandBuffer, Ref<Pipeline> pipeline, Ref<MaterialInstance> material,
 			Ref<VertexBuffer> vertexBuffer, Ref<IndexBuffer> indexBuffer, const PushConstBuffer& constData,
-			Ref<StorageBufferSet> instanceBuffer, uint32_t set, uint32_t binding, uint32_t instanceOffset, uint32_t instanceCount
+			uint32_t instanceOffset, uint32_t instanceCount
 		) override;
 
 		virtual void RenderMesh(

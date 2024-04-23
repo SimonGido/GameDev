@@ -48,5 +48,5 @@ void main()
 	vec3 lightContribution = CalculateDirLight(F0, u_DirectionalLight, pbr);
 
 	color.rgb = iblContribution * lightContribution;
-	imageStore(o_Image, location, color);
+	//imageStore(o_Image, location, color);
 }

@@ -111,8 +111,8 @@ namespace XYZ {
 
 		effectPass();
 		clearPass();
-		raymarchPass();
 		renderPass();
+		raymarchPass();
 		lightPass();
 		if (m_UseSSGI)
 			ssgiPass();
@@ -191,6 +191,28 @@ namespace XYZ {
 		return result;
 	}
 
+
+	void VoxelRenderer::SubmitMesh(const Ref<MaterialAsset>& material, const Ref<Mesh>& mesh, const glm::mat4& transform, uint32_t instanceCount)
+	{
+		auto& renderCommand = m_RenderCommands[material->GetHandle()];
+		renderCommand.Material = material;
+		auto& data = renderCommand.Data.emplace_back();
+		data.Mesh = mesh;
+		data.Transform = transform;
+		data.InstanceCount = instanceCount;
+
+		//if (depthMaterial.Raw())
+		//{
+		//	auto& depthRenderCommand = m_DepthRenderCommands[depthMaterial->GetHandle()];
+		//	depthRenderCommand.Material = depthMaterial;
+		//	auto& depthData = depthRenderCommand.Data.emplace_back();
+		//	depthData.Mesh = mesh;
+		//	depthData.Transform = transform;
+		//	depthData.InstanceCount = instanceCount;
+		//}
+	}
+
+
 	Ref<Image2D> VoxelRenderer::GetFinalPassImage() const
 	{
 		//return m_RenderPass->GetSpecification().TargetFramebuffer->GetImage();
@@ -233,15 +255,6 @@ namespace XYZ {
 		auto& invocation = effectCommand.Invocations.emplace_back();
 		invocation.WorkGroups = workGroups;
 		invocation.Constants = constants;
-	}
-
-	void VoxelRenderer::SubmitRenderCommand(const Ref<MaterialAsset>& material, const Ref<Mesh>& mesh, const glm::mat4& transform, uint32_t instanceCount)
-	{
-		auto& renderCommand = m_RenderCommands[material->GetHandle()];
-		renderCommand.Material = material;
-		auto& data = renderCommand.Data.emplace_back();
-		data.Mesh = mesh;
-		data.Transform = transform;
 	}
 
 
@@ -488,7 +501,6 @@ namespace XYZ {
 			m_RaymarchMaterial
 		);
 
-
 		Bool32 showDepth = m_ShowDepth;
 		Bool32 showNormals = m_ShowNormals;
 
@@ -514,6 +526,11 @@ namespace XYZ {
 		for (auto& [key, cmd] : m_RenderCommands)
 		{
 			Ref<Pipeline> pipeline = getEffectPipelineRaster(cmd.Material);
+			cmd.Material->GetMaterial()->SetImage("o_Image", m_OutputTexture->GetImage());
+			cmd.Material->GetMaterial()->SetImage("o_DepthImage", m_DepthTexture->GetImage());
+			cmd.Material->GetMaterial()->SetImage("o_Normal", m_NormalTexture->GetImage());
+			cmd.Material->GetMaterial()->SetImage("o_Position", m_PositionTexture->GetImage());
+
 			Renderer::BindPipeline(
 				m_CommandBuffer,
 				pipeline,
@@ -522,17 +539,20 @@ namespace XYZ {
 				cmd.Material->GetMaterial()
 			);
 
-			//Renderer::RenderMesh(
-			//	m_CommandBuffer,
-			//	pipeline,
-			//	cmd.Material->GetMaterialInstance(),
-			//	cmd.Mesh->GetVertexBuffer(),
-			//	cmd.Mesh->GetIndexBuffer(),
-			//	cmd.Transform,
-			//	m_InstanceVertexBufferSet,
-			//	command.InstanceOffset,
-			//	command.InstanceCount
-			//);
+			for (auto& data : cmd.Data)
+			{
+				Renderer::RenderMesh(
+					m_CommandBuffer,
+					pipeline,
+					cmd.Material->GetMaterialInstance(),
+					data.Mesh->GetVertexBuffer(),
+					data.Mesh->GetIndexBuffer(),
+					data.Transform,
+					0,
+					data.InstanceCount
+				);
+			}
+			
 		}
 
 		Renderer::EndRenderPass(m_CommandBuffer);
@@ -659,6 +679,8 @@ namespace XYZ {
 			m_DepthTexture = Texture2D::Create(ImageFormat::RED32F, m_ViewportSize.x, m_ViewportSize.y, nullptr, props);
 			m_SSGITexture = Texture2D::Create(ImageFormat::RGBA16F, m_ViewportSize.x, m_ViewportSize.y, nullptr, props);
 			
+			m_RenderPass->GetSpecification().TargetFramebuffer->Resize(m_ViewportSize.x, m_ViewportSize.y);
+
 			m_RaymarchMaterial->SetImage("o_Image", m_OutputTexture->GetImage());
 			m_RaymarchMaterial->SetImage("o_DepthImage", m_DepthTexture->GetImage());
 			m_RaymarchMaterial->SetImage("o_Normal", m_NormalTexture->GetImage());
@@ -988,7 +1010,15 @@ namespace XYZ {
 		compFramebufferSpec.ClearColor = { 0.1f, 0.1f, 0.1f, 1.0f };
 		compFramebufferSpec.SwapChainTarget = false;
 		compFramebufferSpec.ClearOnLoad = false;
-		compFramebufferSpec.Attachments = { ImageFormat::RGBA, ImageFormat::Depth };
+
+		FramebufferTextureSpecification colorAttachment;
+		colorAttachment.Format = ImageFormat::RGBA32F;
+
+		FramebufferTextureSpecification depthAttachment;
+		depthAttachment.Format = ImageFormat::Depth;
+
+
+		compFramebufferSpec.Attachments = { colorAttachment, depthAttachment };
 
 		Ref<Framebuffer> framebuffer = Framebuffer::Create(compFramebufferSpec);
 

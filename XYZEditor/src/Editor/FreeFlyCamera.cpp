@@ -26,20 +26,14 @@ namespace XYZ {
 		void FreeFlyCamera::OnUpdate(Timestep ts)
 		{
 			float cameraSpeed = 50.0f * ts; // Adjust this value as needed
+			float rotationSensitivity = 1.5f * ts;
 
 			const glm::vec3 forwardDir = GetForwardDirection();
 			const glm::vec3 upDir = GetUpDirection();
 			const glm::quat orientation = GetOrientation();
 
-			if (Input::IsMouseButtonPressed(MouseCode::MOUSE_BUTTON_LEFT))
-			{
-				const glm::vec2& mouse{ Input::GetMouseX(), Input::GetMouseY() };
-				const glm::vec2 delta = (mouse - m_InitialMousePosition) * 0.003f;
-				m_InitialMousePosition = mouse;
-				mouseRotate(delta);
-			}
 
-			float rotationSensitivity = 0.01f;
+
 			if (Input::IsKeyPressed(KeyCode::KEY_A))
 				m_Yaw -= rotationSensitivity;
 			if (Input::IsKeyPressed(KeyCode::KEY_D))

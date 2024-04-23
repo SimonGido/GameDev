@@ -108,7 +108,7 @@ namespace XYZ {
 
 	struct SSBOVoxelComputeData
 	{
-		static constexpr uint32_t MaxSize = 1024 * 1024 * 1024; // 1gb
+		static constexpr uint32_t MaxSize = 1024 * 1024 * 1024 * 2; // 2gb
 
 		static constexpr uint32_t Binding = 21;
 		static constexpr uint32_t Set = 0;
@@ -150,9 +150,9 @@ namespace XYZ {
 		bool SubmitMesh(const Ref<VoxelMesh>& mesh, const glm::mat4& transform);
 		bool SubmitMesh(const Ref<VoxelMesh>& mesh, const glm::mat4& transform, int32_t* indices);
 		bool SubmitMesh(const Ref<VoxelMesh>& mesh, const glm::mat4& transform, const uint32_t* keyFrames);
+		void SubmitMesh(const Ref<MaterialAsset>& material, const Ref<Mesh>& mesh, const glm::mat4& transform, uint32_t instanceCount);
 
 		void SubmitEffect(const Ref<MaterialAsset>& material, const glm::ivec3& workGroups, const PushConstBuffer& constants);
-		void SubmitRenderCommand(const Ref<MaterialAsset>& material, const Ref<Mesh>& mesh, const glm::mat4& transform, uint32_t instanceCount);
 
 		void OnImGuiRender();
 
@@ -190,6 +190,7 @@ namespace XYZ {
 		{
 			Ref<Mesh> Mesh;
 			glm::mat4 Transform;
+			uint32_t  InstanceCount;
 		};
 
 		struct RenderCommand

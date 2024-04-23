@@ -121,6 +121,28 @@ namespace XYZ {
 		m_VertexBuffer = VertexBuffer::Create(m_StaticVertices.data(), static_cast<uint32_t>(m_StaticVertices.size() * sizeof(Vertex)));
 		m_IndexBuffer = IndexBuffer::Create(m_Indices.data(), static_cast<uint32_t>(m_Indices.size()));
 	}
+
+	MeshSource::MeshSource(std::vector<ColoredVertex> vertices, std::vector<uint32_t> indices)
+		:
+		m_StaticColoredVertices(std::move(vertices)),
+		m_Indices(std::move(indices)),
+		m_SubmeshTransform(1.0f),
+		m_InverseTransform(1.0f),
+		m_Scene(nullptr),
+		m_IsAnimated(false)
+	{
+		m_SubmeshBoundingBox.Min = { FLT_MAX, FLT_MAX, FLT_MAX };
+		m_SubmeshBoundingBox.Max = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
+		for (const auto& vertex : m_StaticColoredVertices)
+		{
+			updateBoundingBox(vertex.Position);
+		}
+		setupTriangles();
+
+		m_VertexBuffer = VertexBuffer::Create(m_StaticColoredVertices.data(), static_cast<uint32_t>(m_StaticColoredVertices.size() * sizeof(ColoredVertex)));
+		m_IndexBuffer = IndexBuffer::Create(m_Indices.data(), static_cast<uint32_t>(m_Indices.size()));
+	}
+
 	MeshSource::MeshSource(std::vector<AnimatedVertex> vertices, std::vector<uint32_t> indices)
 		:
 		m_AnimatedVertices(std::move(vertices)),
@@ -292,13 +314,24 @@ namespace XYZ {
 				m_Triangles.push_back({ v1.Position, v2.Position, v3.Position });
 			}
 		}
-		else
+		else if (!m_StaticVertices.empty())
 		{
 			for (size_t i = 0; i < m_Indices.size(); i += 3)
 			{
 				const auto& v1 = m_StaticVertices[m_Indices[i]];
 				const auto& v2 = m_StaticVertices[m_Indices[i + 1]];
 				const auto& v3 = m_StaticVertices[m_Indices[i + 2]];
+
+				m_Triangles.push_back({ v1.Position, v2.Position, v3.Position });
+			}
+		}
+		else
+		{
+			for (size_t i = 0; i < m_Indices.size(); i += 3)
+			{
+				const auto& v1 = m_StaticColoredVertices[m_Indices[i]];
+				const auto& v2 = m_StaticColoredVertices[m_Indices[i + 1]];
+				const auto& v3 = m_StaticColoredVertices[m_Indices[i + 2]];
 
 				m_Triangles.push_back({ v1.Position, v2.Position, v3.Position });
 			}

@@ -26,6 +26,7 @@ namespace XYZ {
 		ImageFormat			 Format;
 		bool				 GenerateMips;
 		bool				 Blend = true;
+
 		FramebufferBlendMode BlendMode = FramebufferBlendMode::SrcAlphaOneMinusSrcAlpha;
 	};
 

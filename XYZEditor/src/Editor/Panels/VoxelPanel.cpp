@@ -163,9 +163,15 @@ namespace XYZ {
 			}
 			pushGenerateVoxelMeshJob();
 
-			Ref<Shader> waterShader = Shader::Create("Resources/Shaders/Voxel/Water.glsl");
-			Ref<ShaderAsset> waterShaderAsset = Ref<ShaderAsset>::Create(waterShader);
-			m_WaterMaterial = Ref<MaterialAsset>::Create(waterShaderAsset);
+			//Ref<Shader> waterShader = Shader::Create("Resources/Shaders/Voxel/Water.glsl");
+			//Ref<ShaderAsset> waterShaderAsset = Ref<ShaderAsset>::Create(waterShader);
+			//m_WaterMaterial = Ref<MaterialAsset>::Create(waterShaderAsset);
+
+			
+			Ref<Shader> grassShader = Shader::Create("Resources/Shaders/Voxel/Grass.glsl");
+			Ref<ShaderAsset> grassShaderAsset = Ref<ShaderAsset>::Create(grassShader);
+			m_GrassMaterial = Ref<MaterialAsset>::Create(grassShaderAsset);
+			m_GrassMesh = MeshFactory::CreateCube({ 5, 5, 5 }, glm::vec4(0.0, 1.0, 0.0, 1.0));
 		}
 
 		VoxelPanel::~VoxelPanel()
@@ -320,6 +326,8 @@ namespace XYZ {
 				}
 				
 				submitWater();
+
+				m_VoxelRenderer->SubmitMesh(m_GrassMaterial, m_GrassMesh, glm::mat4(1.0f), 512 * 512);
 				
 				if (m_CurrentTime > m_KeyLength)
 				{
@@ -398,6 +406,22 @@ namespace XYZ {
 		void VoxelPanel::SetVoxelRenderer(const Ref<VoxelRenderer>& voxelRenderer)
 		{
 			m_VoxelRenderer = voxelRenderer;
+			uint32_t numInstances = 512 * 512;
+			
+			m_VoxelRenderer->CreateComputeAllocation(numInstances * sizeof(glm::vec4), m_GrassAllocation);
+
+			std::vector<glm::vec4> grassPositions;
+
+			for (uint32_t x = 0; x < 512; x++)
+			{
+				for (uint32_t z = 0; z < 512; z++)
+				{
+					grassPositions.push_back({ x * 10, 0, z * 10, 0 });
+				}
+			}
+
+			m_VoxelRenderer->SubmitComputeData(grassPositions.data(), grassPositions.size() * sizeof(glm::vec4), 0, m_GrassAllocation);
+
 			//m_VoxelRenderer->CreateComputeAllocation(1024 * 400 * 1024, m_WaterDensityAllocation);
 		}
 
@@ -483,26 +507,26 @@ namespace XYZ {
 					400 / 2 / 4 // submesh height / 2 / local_size_z
 				};
 
-				for (uint32_t j = 0; j < 2; ++j)
-				{
-					for (uint32_t i = 0; i < 9; ++i)
-					{
-						m_VoxelRenderer->SubmitEffect(
-							m_WaterMaterial,
-							workGroups,
-							PushConstBuffer
-							{
-								randSeeds[i],
-								0u, // Model index
-								(uint32_t)Empty,
-								(uint32_t)Water,
-								255u, // Max density
-								i,
-								j
-							}
-						);
-					}
-				}
+				//for (uint32_t j = 0; j < 2; ++j)
+				//{
+				//	for (uint32_t i = 0; i < 9; ++i)
+				//	{
+				//		m_VoxelRenderer->SubmitEffect(
+				//			m_WaterMaterial,
+				//			workGroups,
+				//			PushConstBuffer
+				//			{
+				//				randSeeds[i],
+				//				0u, // Model index
+				//				(uint32_t)Empty,
+				//				(uint32_t)Water,
+				//				255u, // Max density
+				//				i,
+				//				j
+				//			}
+				//		);
+				//	}
+				//}
 			}
 		}		
 		

@@ -29,6 +29,13 @@ namespace XYZ {
 		glm::vec2 TexCoord;
 	};
 
+	struct ColoredVertex
+	{
+		glm::vec3 Position;
+		glm::vec3 Normal;
+		glm::vec4 Color;
+	};
+
 	struct XYZ_API AnimatedVertex
 	{
 		glm::vec3 Position;
@@ -65,6 +72,7 @@ namespace XYZ {
 		MeshSource(const std::string& filepath);
 		MeshSource(const aiScene* scene, const std::string& filepath);
 		MeshSource(std::vector<Vertex> vertices, std::vector<uint32_t> indices);
+		MeshSource(std::vector<ColoredVertex> vertices, std::vector<uint32_t> indices);
 		MeshSource(std::vector<AnimatedVertex> vertices, std::vector<uint32_t> indices);
 
 		virtual AssetType GetAssetType() const override { return AssetType::MeshSource; }
@@ -105,6 +113,8 @@ namespace XYZ {
 
 		std::vector<AnimatedVertex> m_AnimatedVertices;
 		std::vector<Vertex>			m_StaticVertices;
+		std::vector<ColoredVertex>	m_StaticColoredVertices;
+
 		std::vector<uint32_t>		m_Indices;
 		std::vector<Triangle>		m_Triangles;
 

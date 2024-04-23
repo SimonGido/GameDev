@@ -97,6 +97,9 @@ namespace XYZ {
 			Ref<VoxelProceduralMesh> m_TreeMesh;
 
 			Ref<MaterialAsset> m_WaterMaterial;
+			Ref<MaterialAsset> m_GrassMaterial;
+
+			Ref<Mesh> m_GrassMesh;
 			
 			static constexpr uint8_t Empty = 0;
 			static constexpr uint8_t Water = 1;
@@ -117,6 +120,8 @@ namespace XYZ {
 			std::future<VoxelTerrain> m_GenerateVoxelsFuture;
 	
 			bool m_Generating = false;
+
+			StorageBufferAllocation m_GrassAllocation;
 
 			StorageBufferAllocation m_WaterDensityAllocation;
 			bool m_UpdateWater = false;
