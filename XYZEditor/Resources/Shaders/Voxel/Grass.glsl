@@ -56,7 +56,7 @@ void main()
 	v_Output.Position = instancePosition.xyz;
 	v_Output.Normal = mat3(u_Renderer.Transform) * a_Normal;
 	v_Output.Depth = -(viewMatrix * instancePosition).z;
-	gl_Position = viewProjection * instancePosition;
+	gl_Position = viewProjection * vec4(instancePosition.xyz, 1.0);
 }
 
 

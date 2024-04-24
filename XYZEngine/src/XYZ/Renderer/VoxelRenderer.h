@@ -241,6 +241,7 @@ namespace XYZ {
 		void debugPass();
 		
 		void imageBarrier(Ref<PipelineCompute> pipeline, Ref<Image2D> image);
+		void imageBarrierFragment(Ref<Pipeline> pipeline, Ref<Image2D> image);
 		void ssboBarrier(Ref<PipelineCompute> pipeline);
 
 		void updateViewportSize();

@@ -88,8 +88,8 @@ namespace XYZ {
 			:
 			EditorPanel(std::forward<std::string>(name)),
 			m_ViewportSize(0.0f),
-			m_EditorCamera(30.0f, 1.778f, 0.1f, 10000.0f),
-			m_FreeFlyCamera(30.0f, 1.778f, 0.1f, 10000.0f),
+			m_EditorCamera(30.0f, 1.778f, 0.1f, 1000.0f),
+			m_FreeFlyCamera(30.0f, 1, 0.1f, 2000.0f),
 			m_Octree(AABB(glm::vec3(0.0f), glm::vec3(0.0f)), 10),
 			m_World("blabla", 50)
 		{

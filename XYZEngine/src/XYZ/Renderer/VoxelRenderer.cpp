@@ -4,6 +4,7 @@
 #include "Renderer.h"
 
 #include "XYZ/API/Vulkan/VulkanPipelineCompute.h"
+#include "XYZ/API/Vulkan/VulkanPipeline.h"
 #include "XYZ/API/Vulkan/VulkanStorageBufferSet.h"
 
 #include "XYZ/Utils/Math/Math.h"
@@ -286,6 +287,11 @@ namespace XYZ {
 					XYZ_CORE_WARN("Failed to compile raymarch shader");
 				}
 			}
+
+			if (ImGui::Button("Reload Post Raster Shader"))
+			{
+				createPostRasterPipeline();
+			}
 			
 			if (ImGui::Button("Reload Shader Light"))
 			{
@@ -557,7 +563,7 @@ namespace XYZ {
 	}
 	void VoxelRenderer::postRasterPass()
 	{
-		Renderer::BeginRenderPass(m_CommandBuffer, m_PostRasterRenderPass, false, false);
+		Renderer::BeginRenderPass(m_CommandBuffer, m_PostRasterRenderPass, false, true);
 
 		Renderer::BindPipeline(
 			m_CommandBuffer,
@@ -570,6 +576,8 @@ namespace XYZ {
 		Renderer::SubmitFullscreenQuad(m_CommandBuffer, m_PostRasterPipeline, m_PostRasterMaterialInstance, glm::mat4(1.0f));
 		
 		Renderer::EndRenderPass(m_CommandBuffer);
+		imageBarrierFragment(m_PostRasterPipeline, m_OutputTexture->GetImage());
+		imageBarrierFragment(m_PostRasterPipeline, m_DepthTexture->GetImage());
 	}
 	void VoxelRenderer::ssgiPass()
 	{
@@ -644,6 +652,33 @@ namespace XYZ {
 			vkCmdPipelineBarrier(
 				vulkanPipeline->GetActiveCommandBuffer(),
 				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+				0,
+				0, nullptr,
+				0, nullptr,
+				1, &imageMemoryBarrier);
+			});
+	}
+
+	void VoxelRenderer::imageBarrierFragment(Ref<Pipeline> pipeline, Ref<Image2D> image)
+	{
+		Ref<VulkanPipeline> vulkanPipeline = pipeline.As<VulkanPipeline>();
+		Ref<VulkanImage2D> vulkanImage = image.As<VulkanImage2D>();
+		Ref<VulkanPrimaryRenderCommandBuffer> vulkanCommandBuffer = m_CommandBuffer.As<VulkanPrimaryRenderCommandBuffer>();
+		Renderer::Submit([vulkanPipeline, vulkanImage, vulkanCommandBuffer]() {
+			
+			const uint32_t frameIndex = Renderer::GetCurrentFrame();
+			VkImageMemoryBarrier imageMemoryBarrier = {};
+			imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+			imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+			imageMemoryBarrier.image = vulkanImage->GetImageInfo().Image;
+			imageMemoryBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, vulkanImage->GetSpecification().Mips, 0, 1 };
+			imageMemoryBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+			imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			vkCmdPipelineBarrier(
+				(const VkCommandBuffer)vulkanCommandBuffer->CommandBufferHandle(frameIndex),
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 				0,
 				0, nullptr,
@@ -1053,11 +1088,14 @@ namespace XYZ {
 
 	void VoxelRenderer::createPostRasterRenderPass()
 	{
+		FramebufferTextureSpecification depthAttachment;
+		depthAttachment.Format = ImageFormat::DEPTH32F;
+
 		FramebufferSpecification compFramebufferSpec;
-		compFramebufferSpec.ClearColor = { 0.1f, 0.1f, 0.1f, 1.0f };
+		compFramebufferSpec.ClearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
 		compFramebufferSpec.SwapChainTarget = false;
 		compFramebufferSpec.ClearOnLoad = false;
-		compFramebufferSpec.Attachments = { };
+		compFramebufferSpec.Attachments = { depthAttachment };
 		Ref<Framebuffer> framebuffer = Framebuffer::Create(compFramebufferSpec);
 
 		RenderPassSpecification renderPassSpec;
@@ -1068,27 +1106,30 @@ namespace XYZ {
 	void VoxelRenderer::createPostRasterPipeline()
 	{
 		Ref<Shader> postRasterShader = Shader::Create("Resources/Shaders/Voxel/PostRasterShader.glsl");
-		m_PostRasterMaterial = Material::Create(postRasterShader);
-		m_PostRasterMaterialInstance = m_PostRasterMaterial->CreateMaterialInstance();
+		if (postRasterShader->IsCompiled())
+		{
+			m_PostRasterMaterial = Material::Create(postRasterShader);
+			m_PostRasterMaterialInstance = m_PostRasterMaterial->CreateMaterialInstance();
 
-		PipelineSpecification spec;
-		spec.Shader = m_PostRasterMaterial->GetShader();
-		spec.Topology = PrimitiveTopology::Triangles;
-		spec.RenderPass = m_PostRasterRenderPass;
-		spec.DepthTest = false;
-		spec.DepthWrite = false;
-		spec.BackfaceCulling = true;
+			PipelineSpecification spec;
+			spec.Shader = m_PostRasterMaterial->GetShader();
+			spec.Topology = PrimitiveTopology::Triangles;
+			spec.RenderPass = m_PostRasterRenderPass;
+			spec.DepthTest = false;
+			spec.DepthWrite = false;
+			spec.BackfaceCulling = true;
 
-		m_PostRasterPipeline = Pipeline::Create(spec);
+			m_PostRasterPipeline = Pipeline::Create(spec);
 
-		auto rasterImage = m_RenderPass->GetSpecification().TargetFramebuffer->GetImage();
-		auto depthImage = m_RenderPass->GetSpecification().TargetFramebuffer->GetDepthImage();
+			auto rasterImage = m_RenderPass->GetSpecification().TargetFramebuffer->GetImage();
+			auto depthImage = m_RenderPass->GetSpecification().TargetFramebuffer->GetDepthImage();
 
-		m_PostRasterMaterial->SetImage("u_RasterImage", rasterImage);
-		m_PostRasterMaterial->SetImage("u_RasterDepthImage", depthImage);
+			m_PostRasterMaterial->SetImage("u_RasterImage", rasterImage);
+			m_PostRasterMaterial->SetImage("u_RasterDepthImage", depthImage);
 
-		m_PostRasterMaterial->SetImage("o_Image", m_OutputTexture->GetImage());
-		m_PostRasterMaterial->SetImage("o_DepthImage", m_DepthTexture->GetImage());
+			m_PostRasterMaterial->SetImage("o_Image", m_OutputTexture->GetImage());
+			m_PostRasterMaterial->SetImage("o_DepthImage", m_DepthTexture->GetImage());
+		}
 	}
 
 }

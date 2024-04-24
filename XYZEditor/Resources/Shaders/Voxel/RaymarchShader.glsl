@@ -109,7 +109,7 @@ layout(binding = 25, rgba32f) uniform image2D o_Position;
 
 // Helper functions
 
-const float FarClip = 10000.0;
+const float FarClip = 2000.0;
 const float NearClip = 0.1;
 
 float DistToDepth(float dist)
@@ -131,6 +131,7 @@ AABB ModelAABB(in VoxelModel model)
 	result.Max = vec3(model.Width, model.Height, model.Depth) * model.VoxelSize;
 	return result;
 }
+
 
 Ray CreateRay(vec3 origin, in mat4 inverseModelSpace, vec2 coords)
 {
