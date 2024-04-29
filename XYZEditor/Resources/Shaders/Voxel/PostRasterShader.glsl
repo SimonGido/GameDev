@@ -11,7 +11,6 @@ struct VertexOutput
 {
 	mat4 InverseProjectionMatrix;
 	vec2 TexCoord;
-	vec2 ViewportSize;
 };
 
 layout (std140, binding = 16) uniform Scene
@@ -73,8 +72,8 @@ float DistToDepth(float dist)
     worldPos.z = -dist;
     worldPos.w = 1.0;
 
-    // Apply the projection matrix to transform worldPos to clip space
-    vec4 clipPos = inverse(v_Input.InverseProjectionMatrix) * worldPos;
+    // Apply the inverse projection matrix to transform worldPos to clip space
+    vec4 clipPos = v_Input.InverseProjectionMatrix * worldPos;
 
     // Perform perspective division
     vec4 ndcPos = clipPos / clipPos.w;
@@ -95,7 +94,7 @@ float DepthToDist(float depth)
 	
 	vec4 worldPos = v_Input.InverseProjectionMatrix * screenPos;
 	worldPos /= worldPos.w;
-	return -worldPos.z;
+	return length(worldPos);
 }
 
 

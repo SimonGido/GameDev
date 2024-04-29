@@ -85,6 +85,7 @@ namespace XYZ {
 			FreeFlyCamera m_FreeFlyCamera;
 			EditorCamera m_EditorCamera;
 			
+			TransformComponent m_GrassTransform;
 			std::vector<TransformComponent> m_TreeTransforms;
 			std::vector<TransformComponent> m_Transforms;
 
@@ -116,6 +117,7 @@ namespace XYZ {
 			uint32_t m_Octaves = 3;
 			uint32_t m_Seed = 60;
 
+			
 			VoxelTerrain m_Terrain;
 			std::future<VoxelTerrain> m_GenerateVoxelsFuture;
 	

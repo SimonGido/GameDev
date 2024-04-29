@@ -517,6 +517,7 @@ bool ResolveRayModelIntersection(in vec3 origin, vec3 direction, in VoxelModel m
 void StoreHitResult(in RaymarchResult result)
 {
 	ivec2 textureIndex = ivec2(gl_GlobalInvocationID.xy);	
+	float storedDistance = imageLoad(o_DepthImage, textureIndex).r;
 
 	result.Color.a = min(result.Color.a, 1.0);
 	if (result.Color.a < 1.0)

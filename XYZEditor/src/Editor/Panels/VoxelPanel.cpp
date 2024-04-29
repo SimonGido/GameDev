@@ -229,7 +229,7 @@ namespace XYZ {
 			if (ImGui::Begin("Transforms"))
 			{
 				int id = 0;
-
+				drawTransform(m_GrassTransform, id++);
 				for (auto& transform : m_TreeTransforms)
 				{
 					ImGui::Text("%d", id);
@@ -327,7 +327,7 @@ namespace XYZ {
 				
 				submitWater();
 
-				m_VoxelRenderer->SubmitMesh(m_GrassMaterial, m_GrassMesh, glm::mat4(1.0f), 512 * 512);
+				m_VoxelRenderer->SubmitMesh(m_GrassMaterial, m_GrassMesh, m_GrassTransform.GetLocalTransform(), 512 * 512);
 				
 				if (m_CurrentTime > m_KeyLength)
 				{
