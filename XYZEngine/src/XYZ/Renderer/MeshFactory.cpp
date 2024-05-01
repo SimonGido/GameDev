@@ -68,49 +68,42 @@ namespace XYZ {
 	}
 	Ref<StaticMesh> MeshFactory::CreateCube(const glm::vec3& size, const glm::vec4& color)
 	{
-		glm::vec4 frontFace = { 1, 0, 0, 1 };
-		glm::vec4 topFace = { 0, 1,0 ,1 };
-		glm::vec4 bottomFace = { 0, 0, 1, 1 };
-		glm::vec4 leftFace = { 1, 1, 0, 1 };
-		glm::vec4 rightFace = { 1, 1, 1, 1 };
-		glm::vec4 backFace = { 0, 1, 1, 1 };
-
 		std::vector<ColoredVertex> vertices = {
 			// Front face
-			ColoredVertex{{ -size.x / 2.0f, -size.y / 2.0f,  -size.z / 2.0f },{0, 0, 1}, frontFace},
-			ColoredVertex{{  size.x / 2.0f, -size.y / 2.0f,  -size.z / 2.0f },{0, 0, 1}, frontFace},
-			ColoredVertex{{  size.x / 2.0f,  size.y / 2.0f,  -size.z / 2.0f },{0, 0, 1}, frontFace},
-			ColoredVertex{{ -size.x / 2.0f,  size.y / 2.0f,  -size.z / 2.0f },{0, 0, 1}, frontFace},
+			ColoredVertex{{ -size.x / 2.0f, -size.y / 2.0f,  -size.z / 2.0f },{0, 0, 1}, color},
+			ColoredVertex{{  size.x / 2.0f, -size.y / 2.0f,  -size.z / 2.0f },{0, 0, 1}, color},
+			ColoredVertex{{  size.x / 2.0f,  size.y / 2.0f,  -size.z / 2.0f },{0, 0, 1}, color},
+			ColoredVertex{{ -size.x / 2.0f,  size.y / 2.0f,  -size.z / 2.0f },{0, 0, 1}, color},
 
 			// Top face
-			ColoredVertex{{ -size.x / 2.0f,  size.y / 2.0f,  size.z / 2.0f },{0, 1, 0}, topFace},
-			ColoredVertex{{  size.x / 2.0f,  size.y / 2.0f,  size.z / 2.0f },{0, 1, 0}, topFace},
-			ColoredVertex{{  size.x / 2.0f,  size.y / 2.0f, -size.z / 2.0f },{0, 1, 0}, topFace},
-			ColoredVertex{{ -size.x / 2.0f,  size.y / 2.0f, -size.z / 2.0f },{0, 1, 0}, topFace},
+			ColoredVertex{{ -size.x / 2.0f,  size.y / 2.0f,  size.z / 2.0f },{0, 1, 0}, color},
+			ColoredVertex{{  size.x / 2.0f,  size.y / 2.0f,  size.z / 2.0f },{0, 1, 0}, color},
+			ColoredVertex{{  size.x / 2.0f,  size.y / 2.0f, -size.z / 2.0f },{0, 1, 0}, color},
+			ColoredVertex{{ -size.x / 2.0f,  size.y / 2.0f, -size.z / 2.0f },{0, 1, 0}, color},
 			
 			//// Bottom face
-			ColoredVertex{{ -size.x / 2.0f, -size.y / 2.0f,  size.z / 2.0f },{0, -1, 0}, bottomFace},
-			ColoredVertex{{  size.x / 2.0f, -size.y / 2.0f,  size.z / 2.0f },{0, -1, 0}, bottomFace},
-			ColoredVertex{{  size.x / 2.0f, -size.y / 2.0f, -size.z / 2.0f },{0, -1, 0}, bottomFace},
-			ColoredVertex{{ -size.x / 2.0f, -size.y / 2.0f, -size.z / 2.0f },{0, -1, 0}, bottomFace},
+			ColoredVertex{{ -size.x / 2.0f, -size.y / 2.0f,  size.z / 2.0f },{0, -1, 0}, color},
+			ColoredVertex{{  size.x / 2.0f, -size.y / 2.0f,  size.z / 2.0f },{0, -1, 0}, color},
+			ColoredVertex{{  size.x / 2.0f, -size.y / 2.0f, -size.z / 2.0f },{0, -1, 0}, color},
+			ColoredVertex{{ -size.x / 2.0f, -size.y / 2.0f, -size.z / 2.0f },{0, -1, 0}, color},
 			//
 			// Left face
-			ColoredVertex{{ -size.x / 2.0f, -size.y / 2.0f,  size.z / 2.0f },{-1, 0, 0}, leftFace},
-			ColoredVertex{{ -size.x / 2.0f, -size.y / 2.0f, -size.z / 2.0f },{-1, 0, 0}, leftFace},
-			ColoredVertex{{ -size.x / 2.0f,  size.y / 2.0f, -size.z / 2.0f },{-1, 0, 0}, leftFace},
-			ColoredVertex{{ -size.x / 2.0f,  size.y / 2.0f,  size.z / 2.0f },{-1, 0, 0}, leftFace},
+			ColoredVertex{{ -size.x / 2.0f, -size.y / 2.0f,  size.z / 2.0f },{-1, 0, 0}, color},
+			ColoredVertex{{ -size.x / 2.0f, -size.y / 2.0f, -size.z / 2.0f },{-1, 0, 0}, color},
+			ColoredVertex{{ -size.x / 2.0f,  size.y / 2.0f, -size.z / 2.0f },{-1, 0, 0}, color},
+			ColoredVertex{{ -size.x / 2.0f,  size.y / 2.0f,  size.z / 2.0f },{-1, 0, 0}, color},
 			
 			// Right face 
-			ColoredVertex{{  size.x / 2.0f, -size.y / 2.0f,  size.z / 2.0f },{1, 0, 0}, rightFace},
-			ColoredVertex{{  size.x / 2.0f, -size.y / 2.0f, -size.z / 2.0f },{1, 0, 0}, rightFace},
-			ColoredVertex{{  size.x / 2.0f,  size.y / 2.0f, -size.z / 2.0f },{1, 0, 0}, rightFace},
-			ColoredVertex{{  size.x / 2.0f,  size.y / 2.0f,  size.z / 2.0f },{1, 0, 0}, rightFace},
+			ColoredVertex{{  size.x / 2.0f, -size.y / 2.0f,  size.z / 2.0f },{1, 0, 0}, color},
+			ColoredVertex{{  size.x / 2.0f, -size.y / 2.0f, -size.z / 2.0f },{1, 0, 0}, color},
+			ColoredVertex{{  size.x / 2.0f,  size.y / 2.0f, -size.z / 2.0f },{1, 0, 0}, color},
+			ColoredVertex{{  size.x / 2.0f,  size.y / 2.0f,  size.z / 2.0f },{1, 0, 0}, color},
 			
 			// Back face
-			ColoredVertex{{ -size.x / 2.0f, -size.y / 2.0f, size.z / 2.0f },{0, 0, -1}, backFace},
-			ColoredVertex{{  size.x / 2.0f, -size.y / 2.0f, size.z / 2.0f },{0, 0, -1}, backFace},
-			ColoredVertex{{  size.x / 2.0f,  size.y / 2.0f, size.z / 2.0f },{0, 0, -1}, backFace},
-			ColoredVertex{{ -size.x / 2.0f,  size.y / 2.0f, size.z / 2.0f },{0, 0, -1}, backFace}
+			ColoredVertex{{ -size.x / 2.0f, -size.y / 2.0f, size.z / 2.0f },{0, 0, -1}, color},
+			ColoredVertex{{  size.x / 2.0f, -size.y / 2.0f, size.z / 2.0f },{0, 0, -1}, color},
+			ColoredVertex{{  size.x / 2.0f,  size.y / 2.0f, size.z / 2.0f },{0, 0, -1}, color},
+			ColoredVertex{{ -size.x / 2.0f,  size.y / 2.0f, size.z / 2.0f },{0, 0, -1}, color}
 		};
 
 		std::vector<uint32_t> indices = {

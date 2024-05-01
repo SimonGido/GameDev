@@ -171,7 +171,7 @@ namespace XYZ {
 			Ref<Shader> grassShader = Shader::Create("Resources/Shaders/Voxel/Grass.glsl");
 			Ref<ShaderAsset> grassShaderAsset = Ref<ShaderAsset>::Create(grassShader);
 			m_GrassMaterial = Ref<MaterialAsset>::Create(grassShaderAsset);
-			m_GrassMesh = MeshFactory::CreateCube({ 5, 5, 5 }, glm::vec4(0.0, 1.0, 0.0, 1.0));
+			m_GrassMesh = MeshFactory::CreateCube(VoxelWorld::sc_GrassSize, glm::vec4(0.0, 1.0, 0.0, 1.0));
 		}
 
 		VoxelPanel::~VoxelPanel()
@@ -298,10 +298,19 @@ namespace XYZ {
 									newMeshes.push_back(chunk.Mesh);
 								else
 									oldMeshes.push_back(chunk.Mesh);
+							
+								if (!m_GrassAllocation.Valid())
+								{
+									m_VoxelRenderer->CreateComputeAllocation(chunk.GrassPositions.size() * sizeof(glm::vec4), m_GrassAllocation);
+									m_VoxelRenderer->SubmitComputeData(chunk.GrassPositions.data(), m_GrassAllocation.GetSize(), 0.0f, m_GrassAllocation);
+									m_GrassTransform.DecomposeTransform(chunk.Mesh->GetInstances()[0].Transform);
+								}
 							}
 						}
 					}
 				}
+				
+
 				for (const auto& mesh : oldMeshes)
 					m_VoxelRenderer->SubmitMesh(mesh, glm::mat4(1.0f));
 				
@@ -327,8 +336,10 @@ namespace XYZ {
 				
 				submitWater();
 
-				m_VoxelRenderer->SubmitMesh(m_GrassMaterial, m_GrassMesh, m_GrassTransform.GetLocalTransform(), 512 * 512);
-				
+				if (m_GrassAllocation.Valid())
+				{
+					m_VoxelRenderer->SubmitMesh(m_GrassMaterial, m_GrassMesh, m_GrassTransform.GetLocalTransform(), m_GrassAllocation.GetSize() / sizeof(glm::vec4));
+				}
 				if (m_CurrentTime > m_KeyLength)
 				{
 					const uint32_t numKeyframes = m_DeerMesh->GetMeshSource()->GetInstances()[0].ModelAnimation.SubmeshIndices.size();
@@ -406,23 +417,6 @@ namespace XYZ {
 		void VoxelPanel::SetVoxelRenderer(const Ref<VoxelRenderer>& voxelRenderer)
 		{
 			m_VoxelRenderer = voxelRenderer;
-			uint32_t numInstances = 512 * 512;
-			
-			m_VoxelRenderer->CreateComputeAllocation(numInstances * sizeof(glm::vec4), m_GrassAllocation);
-
-			std::vector<glm::vec4> grassPositions;
-
-			for (uint32_t x = 0; x < 512; x++)
-			{
-				for (uint32_t z = 0; z < 512; z++)
-				{
-					grassPositions.push_back({ x * 10, 40, z * 10, 0 });
-				}
-			}
-
-			m_VoxelRenderer->SubmitComputeData(grassPositions.data(), grassPositions.size() * sizeof(glm::vec4), 0, m_GrassAllocation);
-
-			//m_VoxelRenderer->CreateComputeAllocation(1024 * 400 * 1024, m_WaterDensityAllocation);
 		}
 
 

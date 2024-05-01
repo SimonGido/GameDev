@@ -267,6 +267,16 @@ namespace XYZ {
 					const uint32_t index = Index3D(x, y, z, submesh.Width, submesh.Height);
 					submesh.ColorIndices[index] = 2; // Water
 				}
+				if (genHeight >= waterHeight)
+				{
+					glm::vec4 grassPosition = {
+						static_cast<float>(x) * submesh.VoxelSize,
+						static_cast<float>(genHeight + 1) * submesh.VoxelSize,
+						static_cast<float>(z) * submesh.VoxelSize,
+						0.0f
+					};
+					chunk.GrassPositions.push_back(grassPosition);
+				}
 			}
 		}
 
