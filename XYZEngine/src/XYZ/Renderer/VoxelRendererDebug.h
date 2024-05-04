@@ -54,6 +54,7 @@ namespace XYZ {
 		void ShowBVH(const BVH& bvh, int32_t depth);
 		void ShowAABBGrid(const AABBGrid& grid);
 		void ShowOctree(const Octree& octree);
+		void SubmitAABB(const glm::vec3& min, const glm::vec3& max, const glm::vec4& color);
 
 		void SetViewportSize(uint32_t width, uint32_t height);
 
@@ -69,7 +70,6 @@ namespace XYZ {
 		void createPipeline();
 		void updateViewportsize();
 
-		void submitAABB(const glm::vec3& min, const glm::vec3& max, const glm::vec4& color);
 		void submitRay(const Ray& ray, float size, const glm::vec4& color);
 		void submitCompressedVoxels(const VoxelSubmesh& submesh, const std::array<VoxelColor, 256>& collorPallete);
 		void submitVoxelCell(const VoxelSubmesh& submesh, const std::array<VoxelColor, 256>& collorPallete, const glm::ivec3& cellCoord);

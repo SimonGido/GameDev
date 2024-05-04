@@ -18,7 +18,7 @@ namespace XYZ{
 
 		Ref<VoxelProceduralMesh> Mesh;
 		std::vector<uint8_t>	 ColorIndices;
-		std::vector<glm::vec4>	 GrassPositions;
+		//std::vector<glm::vec4>	 GrassPositions;
 	};
 
 	struct VoxelBiom
@@ -35,7 +35,7 @@ namespace XYZ{
 		static constexpr uint32_t	sc_ChunkViewDistance = 3; // View distance from center
 		static constexpr int64_t    sc_MaxVisibleChunksPerAxis = sc_ChunkViewDistance * 2 + 1;
 		static constexpr float      sc_ChunkVoxelSize = 1.0f;
-		static constexpr glm::vec3  sc_GrassSize = { 0.2f, 0.5f, 0.2f };
+		static constexpr glm::vec3  sc_GrassSize = { 0.2f, 1.0f, 0.2f };
 
 		static ThreadQueue<std::vector<uint8_t>> DataPool;
 
@@ -45,6 +45,7 @@ namespace XYZ{
 		
 		void Update(const glm::vec3& position);
 		void ProcessGenerated();
+		const VoxelChunk* GetVoxelChunk(const glm::vec3& position) const;
 
 		const std::unique_ptr<ActiveChunkStorage>& GetActiveChunks() const;
 	private:

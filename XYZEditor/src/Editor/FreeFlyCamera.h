@@ -22,7 +22,7 @@ namespace XYZ {
 			inline void  SetViewportSize(float width, float height) { m_ViewportWidth = width; m_ViewportHeight = height; updateProjection(); }
 
 			const glm::vec3& GetPosition() const { return m_Position; }
-
+			void SetPosition(const glm::vec3& position) { m_Position = position; updateView();}
 			const glm::mat4& GetViewMatrix() const { return m_ViewMatrix; }
 			glm::mat4 GetViewProjection() const { return m_ProjectionMatrix * m_ViewMatrix; }
 

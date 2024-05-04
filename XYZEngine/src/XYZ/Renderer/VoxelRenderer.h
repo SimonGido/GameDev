@@ -108,7 +108,7 @@ namespace XYZ {
 
 	struct SSBOVoxelComputeData
 	{
-		static constexpr uint32_t MaxSize = 1024 * 1024 * 1024 * 2; // 2gb
+		static constexpr uint32_t MaxSize = 1024 * 1024 * 1024 * 1; // 1gb
 
 		static constexpr uint32_t Binding = 21;
 		static constexpr uint32_t Set = 0;
@@ -319,8 +319,6 @@ namespace XYZ {
 		bool					m_ShowNormals = false;
 
 		bool					m_Debug = false;
-		bool					m_DebugOpaque = false;
-
 		int32_t					m_ShowBVHDepth = -1;
 
 		std::vector<VoxelRenderModel*>					 m_RenderModelsSorted;

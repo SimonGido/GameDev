@@ -11,6 +11,8 @@ namespace XYZ {
     {
         glm::vec3 Origin, Direction;
 
+        Ray() = default;
+
         Ray(const glm::vec3& origin, const glm::vec3& direction)
         {
             Origin = origin;

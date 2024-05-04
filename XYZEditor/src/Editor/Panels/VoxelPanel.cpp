@@ -161,6 +161,11 @@ namespace XYZ {
 				m_Transforms[i].GetTransform().Rotation.x = glm::radians(-90.0f);
 				xOffset += 30.0f;
 			}
+
+			m_Transforms[0].GetTransform().Translation.x = 0;
+			m_Transforms[0].GetTransform().Translation.y = 300;
+			m_Transforms[0].GetTransform().Translation.z = 0;
+
 			pushGenerateVoxelMeshJob();
 
 			//Ref<Shader> waterShader = Shader::Create("Resources/Shaders/Voxel/Water.glsl");
@@ -168,10 +173,10 @@ namespace XYZ {
 			//m_WaterMaterial = Ref<MaterialAsset>::Create(waterShaderAsset);
 
 			
-			Ref<Shader> grassShader = Shader::Create("Resources/Shaders/Voxel/Grass.glsl");
-			Ref<ShaderAsset> grassShaderAsset = Ref<ShaderAsset>::Create(grassShader);
-			m_GrassMaterial = Ref<MaterialAsset>::Create(grassShaderAsset);
-			m_GrassMesh = MeshFactory::CreateCube(VoxelWorld::sc_GrassSize, glm::vec4(0.0, 1.0, 0.0, 1.0));
+			//Ref<Shader> grassShader = Shader::Create("Resources/Shaders/Voxel/Grass.glsl");
+			//Ref<ShaderAsset> grassShaderAsset = Ref<ShaderAsset>::Create(grassShader);
+			//m_GrassMaterial = Ref<MaterialAsset>::Create(grassShaderAsset);
+			//m_GrassMesh = MeshFactory::CreateCube(VoxelWorld::sc_GrassSize, glm::vec4(0.0, 1.0, 0.0, 1.0));
 		}
 
 		VoxelPanel::~VoxelPanel()
@@ -229,12 +234,12 @@ namespace XYZ {
 			if (ImGui::Begin("Transforms"))
 			{
 				int id = 0;
-				drawTransform(m_GrassTransform, id++);
-				for (auto& transform : m_TreeTransforms)
-				{
-					ImGui::Text("%d", id);
-					drawTransform(transform, id++);
-				}
+				//drawTransform(m_GrassTransform, id++);
+				//for (auto& transform : m_TreeTransforms)
+				//{
+				//	ImGui::Text("%d", id);
+				//	drawTransform(transform, id++);
+				//}
 				for (auto& transform : m_Transforms)
 				{
 					ImGui::Text("%d", id);
@@ -249,6 +254,7 @@ namespace XYZ {
 		{
 			if (m_VoxelRenderer.Raw())
 			{			
+				auto previousCameraPosition = m_FreeFlyCamera.GetPosition();
 				m_FreeFlyCamera.OnUpdate(ts);
 				
 				const glm::mat4 mvp = m_FreeFlyCamera.GetViewProjection();
@@ -280,7 +286,25 @@ namespace XYZ {
 				}
 				//m_World.Update(m_FreeFlyCamera.GetPosition());
 				m_World.Update(glm::vec3(0));
+				auto collisionChunk = m_World.GetVoxelChunk(m_FreeFlyCamera.GetPosition());
+				if (collisionChunk->Mesh.Raw())
+				{
+					for (const auto& instance : collisionChunk->Mesh->GetInstances())
+					{
+						const auto& submesh = collisionChunk->Mesh->GetSubmeshes()[instance.SubmeshIndex];
+						auto result = VoxelMeshCollision::IsCollision(m_FreeFlyCamera.GetPosition(), submesh, instance.Transform);
 
+						for (auto voxelIndex : result.VoxelIndices)
+						{
+							uint8_t colorIndex = submesh.ColorIndices[voxelIndex];
+							const auto& color = collisionChunk->Mesh->GetColorPallete()[colorIndex];
+							if (color.A == 255)
+							{
+								m_FreeFlyCamera.SetPosition(previousCameraPosition);
+							}
+						}
+					}
+				}
 				std::vector<Ref<VoxelMesh>> newMeshes;
 				std::vector<Ref<VoxelMesh>> oldMeshes;
 				for (const auto& chunkRow : *m_World.GetActiveChunks())
@@ -291,7 +315,9 @@ namespace XYZ {
 						{
 							bool compressed = true;
 							for (auto& submesh : chunk.Mesh->GetSubmeshes())
+							{
 								compressed &= submesh.Compressed;
+							}
 							if (compressed)
 							{
 								if (!m_VoxelRenderer->IsMeshAllocated(chunk.Mesh))
@@ -299,12 +325,12 @@ namespace XYZ {
 								else
 									oldMeshes.push_back(chunk.Mesh);
 							
-								if (!m_GrassAllocation.Valid())
-								{
-									m_VoxelRenderer->CreateComputeAllocation(chunk.GrassPositions.size() * sizeof(glm::vec4), m_GrassAllocation);
-									m_VoxelRenderer->SubmitComputeData(chunk.GrassPositions.data(), m_GrassAllocation.GetSize(), 0.0f, m_GrassAllocation);
-									m_GrassTransform.DecomposeTransform(chunk.Mesh->GetInstances()[0].Transform);
-								}
+								//if (!m_GrassAllocation.Valid())
+								//{
+								//	m_VoxelRenderer->CreateComputeAllocation(chunk.GrassPositions.size() * sizeof(glm::vec4), m_GrassAllocation);
+								//	m_VoxelRenderer->SubmitComputeData(chunk.GrassPositions.data(), m_GrassAllocation.GetSize(), 0.0f, m_GrassAllocation);
+								//	m_GrassTransform.DecomposeTransform(chunk.Mesh->GetInstances()[0].Transform);
+								//}
 							}
 						}
 					}
@@ -336,10 +362,10 @@ namespace XYZ {
 				
 				submitWater();
 
-				if (m_GrassAllocation.Valid())
-				{
-					m_VoxelRenderer->SubmitMesh(m_GrassMaterial, m_GrassMesh, m_GrassTransform.GetLocalTransform(), m_GrassAllocation.GetSize() / sizeof(glm::vec4));
-				}
+				//if (m_GrassAllocation.Valid())
+				//{
+				//	m_VoxelRenderer->SubmitMesh(m_GrassMaterial, m_GrassMesh, m_GrassTransform.GetLocalTransform(), m_GrassAllocation.GetSize() / sizeof(glm::vec4));
+				//}
 				if (m_CurrentTime > m_KeyLength)
 				{
 					const uint32_t numKeyframes = m_DeerMesh->GetMeshSource()->GetInstances()[0].ModelAnimation.SubmeshIndices.size();
@@ -434,7 +460,33 @@ namespace XYZ {
 		{
 			ImGui::PushID(id);
 			glm::vec3 rotation = glm::degrees(transform->Rotation);
-			ImGui::DragFloat3("Translation", glm::value_ptr(transform.GetTransform().Translation), 0.1f);
+			
+			auto prevTranslation = transform.GetTransform().Translation;
+			if (ImGui::DragFloat3("Translation", glm::value_ptr(transform.GetTransform().Translation), 0.1f))
+			{
+				auto collisionChunk = m_World.GetVoxelChunk(transform.GetTransform().Translation);
+				if (collisionChunk->Mesh.Raw())
+				{
+					for (const auto& instance : collisionChunk->Mesh->GetInstances())
+					{
+						const auto& submesh = collisionChunk->Mesh->GetSubmeshes()[instance.SubmeshIndex];
+						const auto& castleSubmesh = m_CastleMesh->GetSubmeshes()[0];
+
+						AABB castleAABB = Utils::VoxelModelToAABB(m_Transforms[id].GetLocalTransform(), castleSubmesh.Width, castleSubmesh.Height, castleSubmesh.Depth, castleSubmesh.VoxelSize);				
+						auto result = VoxelMeshCollision::IsCollision(castleAABB, submesh, instance.Transform);
+
+						for (auto voxelIndex : result.VoxelIndices)
+						{
+							uint8_t colorIndex = submesh.ColorIndices[voxelIndex];
+							const auto& color = collisionChunk->Mesh->GetColorPallete()[colorIndex];
+							if (color.A == 255)
+							{
+								transform.GetTransform().Translation = prevTranslation;
+							}
+						}
+					}
+				}
+			}
 			if (ImGui::DragFloat3("Rotation", glm::value_ptr(rotation), 0.1f))
 			{
 				transform.GetTransform().Rotation = glm::radians(rotation);

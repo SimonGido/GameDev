@@ -124,6 +124,19 @@ namespace XYZ {
 			}
 		}
 	}
+	const VoxelChunk* VoxelWorld::GetVoxelChunk(const glm::vec3& position) const
+	{
+		constexpr uint32_t halfDimensionX = sc_ChunkDimensions.x / 2;
+		constexpr uint32_t halfDimensionZ = sc_ChunkDimensions.z / 2;
+
+		const int64_t chunkX = static_cast<int64_t>(std::floor((position.x + halfDimensionX) / sc_ChunkDimensions.x)) + sc_ChunkViewDistance;
+		const int64_t chunkZ = static_cast<int64_t>(std::floor((position.z + halfDimensionZ) / sc_ChunkDimensions.z)) + sc_ChunkViewDistance;
+
+		const int64_t clampedX = abs(chunkX) % sc_MaxVisibleChunksPerAxis;
+		const int64_t clampedZ = abs(chunkZ) % sc_MaxVisibleChunksPerAxis;
+
+		return &(*m_ActiveChunks)[clampedX][clampedZ];
+	}
 	const std::unique_ptr<VoxelWorld::ActiveChunkStorage>& VoxelWorld::GetActiveChunks() const
 	{
 		return m_ActiveChunks;
@@ -132,12 +145,6 @@ namespace XYZ {
 	{
 		const int64_t chunksWidth = sc_MaxVisibleChunksPerAxis;
 
-		const int64_t chunkMinCoordX = centerChunkX - sc_ChunkViewDistance;
-		const int64_t chunkMaxCoordX = centerChunkX + sc_ChunkViewDistance;
-
-		const int64_t chunkMinCoordZ = centerChunkZ - sc_ChunkViewDistance;
-		const int64_t chunkMaxCoordZ = centerChunkZ + sc_ChunkViewDistance;
-	
 		auto& pool = Application::Get().GetThreadPool();
 		VoxelBiom& forestBiom = m_Bioms["Forest"];
 		for (int64_t chunkX = 0; chunkX < chunksWidth; chunkX++)
@@ -270,7 +277,7 @@ namespace XYZ {
 				}
 				if (genHeight >= waterHeight)
 				{			
-					generateGrassPosition(x, genHeight, z, submesh.VoxelSize, chunk.GrassPositions);
+					//generateGrassPosition(x, genHeight, z, submesh.VoxelSize, chunk.GrassPositions);
 				}
 			}
 		}
@@ -286,8 +293,7 @@ namespace XYZ {
 		const glm::vec2 grassScaleRange = { 0.6f, 1.0f };
 		// NOTE: this is assuming that sc_GrassSize.x and sc_GrassSize.z are equal
 		uint32_t grassBladesPerVoxelRow = static_cast<uint32_t>(floor(voxelSize / sc_GrassSize.x));
-		const uint32_t grassBladesPerVoxel = 5;
-
+		
 		uint32_t grassCount = 0;
 		for (uint32_t x = 0; x < grassBladesPerVoxelRow; x++)
 		{
@@ -309,8 +315,6 @@ namespace XYZ {
 					};
 					grassPositions.push_back(grassPosition + glm::vec4(grassOffset, 0.0f));
 					grassCount++;
-					if (grassCount == grassBladesPerVoxel)
-						return;
 				}
 			}
 		}

@@ -244,7 +244,7 @@ namespace XYZ {
 		Ray ray = Utils::CreateRay(m_CameraPosition, glm::inverse(transform), m_InverseProjection, m_InverseViewMatrix, coords, m_ViewportSize);
 		AABB modelAABB = Utils::ModelAABB(submesh);
 
-		submitAABB(modelAABB.Min, modelAABB.Max, c_BoundingBoxColor);
+		SubmitAABB(modelAABB.Min, modelAABB.Max, c_BoundingBoxColor);
 
 		Ray resolvedRay = ray;
 		float dist = 0.0f;
@@ -273,16 +273,16 @@ namespace XYZ {
 		
 			if (depth == -1)
 			{
-				submitAABB(node.AABB.Min, node.AABB.Max, m_RandomBVHColors[node.Depth]);
+				SubmitAABB(node.AABB.Min, node.AABB.Max, m_RandomBVHColors[node.Depth]);
 			}
 			else if (depth == -2)
 			{
 				if (node.Data != BVHNode::Invalid)
-					submitAABB(node.AABB.Min, node.AABB.Max, m_RandomBVHColors[node.Depth]);
+					SubmitAABB(node.AABB.Min, node.AABB.Max, m_RandomBVHColors[node.Depth]);
 			}
 			else if (node.Depth == depth)
 			{				
-				submitAABB(node.AABB.Min, node.AABB.Max, m_RandomBVHColors[node.Depth]);
+				SubmitAABB(node.AABB.Min, node.AABB.Max, m_RandomBVHColors[node.Depth]);
 			}
 		}
 	}
@@ -309,7 +309,7 @@ namespace XYZ {
 					cellAABB.Max.x = cellAABB.Min.x + cellSize.x;
 					cellAABB.Max.y = cellAABB.Min.y + cellSize.y;
 					cellAABB.Max.z = cellAABB.Min.z + cellSize.z;
-					submitAABB(cellAABB.Min, cellAABB.Max, c_BoundingBoxColor);
+					SubmitAABB(cellAABB.Min, cellAABB.Max, c_BoundingBoxColor);
 				}
 			}
 		}
@@ -322,7 +322,7 @@ namespace XYZ {
 			while (node.Depth >= m_RandomBVHColors.size())
 				m_RandomBVHColors.push_back(Utils::RandomColor());
 
-			submitAABB(node.BoundingBox.Min, node.BoundingBox.Max, m_RandomBVHColors[node.Depth]);
+			SubmitAABB(node.BoundingBox.Min, node.BoundingBox.Max, m_RandomBVHColors[node.Depth]);
 		}
 	}
 
@@ -439,7 +439,7 @@ namespace XYZ {
 			m_ViewportSizeChanged = false;
 		}
 	}
-	void VoxelRendererDebug::submitAABB(const glm::vec3& min, const glm::vec3& max, const glm::vec4& color)
+	void VoxelRendererDebug::SubmitAABB(const glm::vec3& min, const glm::vec3& max, const glm::vec4& color)
 	{
 		glm::vec3 topFrontLeft = { min.x, max.y, min.z };
 		glm::vec3 topFrontRight = { max.x, max.y, min.z };
@@ -494,7 +494,7 @@ namespace XYZ {
 							continue;
 
 						auto& color = collorPallete[colorIndex];
-						submitAABB(cellAABB.Min, cellAABB.Max, Utils::VoxelToColor(color));
+						SubmitAABB(cellAABB.Min, cellAABB.Max, Utils::VoxelToColor(color));
 					}
 				}
 			}
@@ -512,7 +512,7 @@ namespace XYZ {
 				return;
 
 			auto& color = collorPallete[colorIndex];
-			submitAABB(cellAABB.Min, cellAABB.Max, Utils::VoxelToColor(color));
+			SubmitAABB(cellAABB.Min, cellAABB.Max, Utils::VoxelToColor(color));
 		}
 		else
 		{
@@ -538,7 +538,7 @@ namespace XYZ {
 
 						auto& color = collorPallete[colorIndex];
 
-						submitAABB(voxelAABB.Min, voxelAABB.Max, Utils::VoxelToColor(color));
+						SubmitAABB(voxelAABB.Min, voxelAABB.Max, Utils::VoxelToColor(color));
 					}
 				}
 			}

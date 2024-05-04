@@ -347,7 +347,6 @@ namespace XYZ {
 			if (m_Debug)
 			{
 				ImGui::Checkbox("Update Debug", &m_DebugRenderer->UpdateCamera);
-				ImGui::Checkbox("Debug Opaque", &m_DebugOpaque);
 				ImGui::InputInt("BVH Depth", &m_ShowBVHDepth);
 			}
 
@@ -530,6 +529,9 @@ namespace XYZ {
 	}
 	void VoxelRenderer::renderPass()
 	{
+		if (m_RenderCommands.empty())
+			return;
+
 		Renderer::BeginRenderPass(m_CommandBuffer, m_RenderPass, false, true);
 
 		for (auto& [key, cmd] : m_RenderCommands)
@@ -563,6 +565,9 @@ namespace XYZ {
 	}
 	void VoxelRenderer::postRasterPass()
 	{
+		if (m_RenderCommands.empty())
+			return;
+
 		Renderer::BeginRenderPass(m_CommandBuffer, m_PostRasterRenderPass, false, true);
 
 		Renderer::BindPipeline(
@@ -613,27 +618,10 @@ namespace XYZ {
 			m_ViewportSize.y / 2
 		};
 
-		//for (const auto& model : m_RenderModels)
-		//{
-		//	if (m_DebugOpaque)
-		//	{
-		//		if (model.Mesh->IsOpaque())
-		//		{
-		//			m_DebugRenderer->RaymarchSubmesh(
-		//				model.SubmeshIndex, model.BoundingBox, model.Transform, model.Mesh, coords
-		//			);
-		//		}
-		//	}
-		//	else 
-		//	{
-		//		if (!model.Mesh->IsOpaque())
-		//		{
-		//			m_DebugRenderer->RaymarchSubmesh(
-		//				model.SubmeshIndex, model.BoundingBox, model.Transform, model.Mesh, coords
-		//			);
-		//		}
-		//	}
-		//}
+		for (const auto& model : m_RenderModels)
+		{
+			m_DebugRenderer->SubmitAABB(model.BoundingBox.Min, model.BoundingBox.Max, glm::vec4(1, 0, 0, 1));
+		}
 		m_DebugRenderer->EndScene(m_OutputTexture->GetImage());
 	}
 
