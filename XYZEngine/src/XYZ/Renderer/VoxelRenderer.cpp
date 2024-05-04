@@ -577,6 +577,8 @@ namespace XYZ {
 		
 		Renderer::EndRenderPass(m_CommandBuffer);
 		imageBarrierFragment(m_PostRasterPipeline, m_OutputTexture->GetImage());
+		imageBarrierFragment(m_PostRasterPipeline, m_NormalTexture->GetImage());
+		imageBarrierFragment(m_PostRasterPipeline, m_PositionTexture->GetImage());
 		imageBarrierFragment(m_PostRasterPipeline, m_DepthTexture->GetImage());
 	}
 	void VoxelRenderer::ssgiPass()
@@ -731,14 +733,20 @@ namespace XYZ {
 			m_RenderPass->GetSpecification().TargetFramebuffer->Resize(m_ViewportSize.x, m_ViewportSize.y);
 			m_PostRasterRenderPass->GetSpecification().TargetFramebuffer->Resize(m_ViewportSize.x, m_ViewportSize.y);
 
-			auto rasterImage = m_RenderPass->GetSpecification().TargetFramebuffer->GetImage();
+			auto rasterImage = m_RenderPass->GetSpecification().TargetFramebuffer->GetImage(0);
 			auto depthImage = m_RenderPass->GetSpecification().TargetFramebuffer->GetDepthImage();
+			auto rasterNormalImage = m_RenderPass->GetSpecification().TargetFramebuffer->GetImage(1);
+			auto rasterPositionImage = m_RenderPass->GetSpecification().TargetFramebuffer->GetImage(2);
 
 			m_PostRasterMaterial->SetImage("u_RasterImage", rasterImage);
 			m_PostRasterMaterial->SetImage("u_RasterDepthImage", depthImage);
+			m_PostRasterMaterial->SetImage("u_RasterNormalImage", rasterNormalImage);
+			m_PostRasterMaterial->SetImage("u_RasterPositionImage", rasterPositionImage);
 
 			m_PostRasterMaterial->SetImage("o_Image", m_OutputTexture->GetImage());
 			m_PostRasterMaterial->SetImage("o_DepthImage", m_DepthTexture->GetImage());
+			m_PostRasterMaterial->SetImage("o_NormalImage", m_NormalTexture->GetImage());
+			m_PostRasterMaterial->SetImage("o_PositionImage", m_PositionTexture->GetImage());
 
 			m_RaymarchMaterial->SetImage("o_Image", m_OutputTexture->GetImage());
 			m_RaymarchMaterial->SetImage("o_DepthImage", m_DepthTexture->GetImage());
@@ -1073,11 +1081,17 @@ namespace XYZ {
 		FramebufferTextureSpecification colorAttachment;
 		colorAttachment.Format = ImageFormat::RGBA32F;
 
+		FramebufferTextureSpecification normalAttachment;
+		normalAttachment.Format = ImageFormat::RGBA32F;
+
+		FramebufferTextureSpecification positionAttachment;
+		positionAttachment.Format = ImageFormat::RGBA32F;
+
 		FramebufferTextureSpecification depthAttachment;
 		depthAttachment.Format = ImageFormat::DEPTH32F;
 
 
-		compFramebufferSpec.Attachments = { colorAttachment, depthAttachment };
+		compFramebufferSpec.Attachments = { colorAttachment, normalAttachment, positionAttachment, depthAttachment };
 
 		Ref<Framebuffer> framebuffer = Framebuffer::Create(compFramebufferSpec);
 
@@ -1121,14 +1135,20 @@ namespace XYZ {
 
 			m_PostRasterPipeline = Pipeline::Create(spec);
 
-			auto rasterImage = m_RenderPass->GetSpecification().TargetFramebuffer->GetImage();
+			auto rasterImage = m_RenderPass->GetSpecification().TargetFramebuffer->GetImage(0);
 			auto depthImage = m_RenderPass->GetSpecification().TargetFramebuffer->GetDepthImage();
+			auto rasterNormalImage = m_RenderPass->GetSpecification().TargetFramebuffer->GetImage(1);
+			auto rasterPositionImage = m_RenderPass->GetSpecification().TargetFramebuffer->GetImage(2);
 
 			m_PostRasterMaterial->SetImage("u_RasterImage", rasterImage);
 			m_PostRasterMaterial->SetImage("u_RasterDepthImage", depthImage);
+			m_PostRasterMaterial->SetImage("u_RasterNormalImage", rasterNormalImage);
+			m_PostRasterMaterial->SetImage("u_RasterPositionImage", rasterPositionImage);
 
 			m_PostRasterMaterial->SetImage("o_Image", m_OutputTexture->GetImage());
 			m_PostRasterMaterial->SetImage("o_DepthImage", m_DepthTexture->GetImage());
+			m_PostRasterMaterial->SetImage("o_NormalImage", m_NormalTexture->GetImage());
+			m_PostRasterMaterial->SetImage("o_PositionImage", m_PositionTexture->GetImage());
 		}
 	}
 

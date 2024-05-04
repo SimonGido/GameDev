@@ -26,4 +26,10 @@ namespace XYZ {
         return dist(s_RandEng);
     }
 
+    XYZ_API bool RandomBool(float chance)
+    {
+        float rand = RandomNumber(0.0f, 1.0f);
+        return rand < chance;
+    }
+
 }

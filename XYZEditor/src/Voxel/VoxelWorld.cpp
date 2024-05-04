@@ -2,6 +2,7 @@
 #include "VoxelWorld.h"
 
 #include "XYZ/Utils/Math/Perlin.h"
+#include "XYZ/Utils/Random.h"
 
 namespace XYZ {
 
@@ -268,14 +269,8 @@ namespace XYZ {
 					submesh.ColorIndices[index] = 2; // Water
 				}
 				if (genHeight >= waterHeight)
-				{
-					glm::vec4 grassPosition = {
-						static_cast<float>(x) * submesh.VoxelSize,
-						static_cast<float>(genHeight + 1) * submesh.VoxelSize,
-						static_cast<float>(z) * submesh.VoxelSize,
-						0.0f
-					};
-					chunk.GrassPositions.push_back(grassPosition);
+				{			
+					generateGrassPosition(x, genHeight, z, submesh.VoxelSize, chunk.GrassPositions);
 				}
 			}
 		}
@@ -285,7 +280,45 @@ namespace XYZ {
 		chunk.Mesh->SetInstances({ instance });
 
 		return chunk;
-	}	
+	}
+	void VoxelWorld::generateGrassPosition(uint32_t voxelX, uint32_t voxelY, uint32_t voxelZ, float voxelSize, std::vector<glm::vec4>& grassPositions)
+	{
+		const glm::vec2 grassScaleRange = { 0.6f, 1.0f };
+		// NOTE: this is assuming that sc_GrassSize.x and sc_GrassSize.z are equal
+		uint32_t grassBladesPerVoxelRow = static_cast<uint32_t>(floor(voxelSize / sc_GrassSize.x));
+		const uint32_t grassBladesPerVoxel = 5;
+
+		uint32_t grassCount = 0;
+		for (uint32_t x = 0; x < grassBladesPerVoxelRow; x++)
+		{
+			for (uint32_t z = 0; z < grassBladesPerVoxelRow; z++)
+			{
+				float grassScale = RandomNumber(grassScaleRange.x, grassScaleRange.y);
+				glm::vec4 grassPosition = {
+					static_cast<float>(voxelX) * voxelSize + sc_GrassSize.x / 2.0f,
+					static_cast<float>(voxelY) * voxelSize + sc_GrassSize.y * grassScale / 2.0f,
+					static_cast<float>(voxelZ) * voxelSize + sc_GrassSize.z / 2.0f,
+					grassScale
+				};
+				if (RandomBool(0.2f))
+				{
+					glm::vec3 grassOffset = {
+						x * sc_GrassSize.x,
+						0.0f,
+						z * sc_GrassSize.z
+					};
+					grassPositions.push_back(grassPosition + glm::vec4(grassOffset, 0.0f));
+					grassCount++;
+					if (grassCount == grassBladesPerVoxel)
+						return;
+				}
+			}
+		}
+	}
+
+
+
+
 	VoxelChunk::~VoxelChunk()
 	{
 		if (!ColorIndices.empty())

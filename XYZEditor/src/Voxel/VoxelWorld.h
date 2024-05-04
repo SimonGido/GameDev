@@ -54,6 +54,7 @@ namespace XYZ{
 
 		VoxelChunk generateChunk(int64_t chunkX, int64_t chunkZ, const VoxelBiom& biom, bool& cancel);
 
+		void generateGrassPosition(uint32_t voxelX, uint32_t voxelY, uint32_t voxelZ, float voxelSize, std::vector<glm::vec4>& grassPositions);
 
 	private:
 		struct GeneratedChunk

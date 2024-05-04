@@ -38,7 +38,6 @@ struct VertexOutput
 	vec4 Color;
 	vec3 Position;
 	vec3 Normal;
-	float Depth;
 };
 
 layout(location = 0) out VertexOutput v_Output;
@@ -46,16 +45,17 @@ layout(location = 0) out VertexOutput v_Output;
 void main()
 {
 	int id = gl_InstanceIndex;
-	vec4 position = u_Renderer.Transform * vec4(a_Position, 1.0);
-	vec4 instancePosition = position + GrassPosition[id];
-
+	vec4 grassData = GrassPosition[id];
+	vec4 position = u_Renderer.Transform * vec4(a_Position.x, a_Position.y * grassData.w, a_Position.z, 1.0);
+	vec4 instancePosition = vec4(position.xyz + grassData.xyz, 1.0);
+	
 	mat4 viewMatrix = inverse(u_InverseView);
 	mat4 viewProjection = inverse(u_InverseProjection) * viewMatrix;
 	
 	v_Output.Color = a_Color;
 	v_Output.Position = instancePosition.xyz;
 	v_Output.Normal = mat3(u_Renderer.Transform) * a_Normal;
-	v_Output.Depth = -(viewMatrix * instancePosition).z;
+
 	gl_Position = viewProjection * vec4(instancePosition.xyz, 1.0);
 }
 
@@ -68,13 +68,16 @@ struct VertexOutput
 	vec4 Color;
 	vec3 Position;
 	vec3 Normal;
-	float Depth;
 };
 layout(location = 0) in VertexOutput v_Input;
 
 layout(location = 0) out vec4 o_Color;
+layout(location = 1) out vec4 o_Normal;
+layout(location = 2) out vec4 o_Position;
 
 void main()
 {
 	o_Color = v_Input.Color;
+	o_Normal = vec4(v_Input.Normal, 1.0);
+	o_Position = vec4(v_Input.Position, 1.0);
 }

@@ -55,10 +55,14 @@ layout(location = 0) in VertexOutput v_Input;
 
 layout(binding = 0) uniform sampler2D u_RasterImage;
 layout(binding = 1) uniform sampler2D u_RasterDepthImage;
+layout(binding = 2) uniform sampler2D u_RasterNormalImage;
+layout(binding = 3) uniform sampler2D u_RasterPositionImage;
 
-layout(binding = 2, rgba32f) uniform image2D o_Image;
-layout(binding = 3, rgba32f) uniform image2D o_DepthImage;
 
+layout(binding = 4, rgba32f) uniform image2D o_Image;
+layout(binding = 5, rgba32f) uniform image2D o_DepthImage;
+layout(binding = 6, rgba32f) uniform image2D o_NormalImage;
+layout(binding = 7, rgba32f) uniform image2D o_PositionImage;
 
 const float FarClip = 2000.0;
 const float NearClip = 0.1;
@@ -108,6 +112,8 @@ float LinearizeDepth(float depthBufferValue, float near, float far)
 void main()
 {    
     vec4 rasterColor	= texture(u_RasterImage, v_Input.TexCoord);
+	vec4 rasterNormal	= texture(u_RasterNormalImage, v_Input.TexCoord);
+	vec4 rasterPosition = texture(u_RasterPositionImage, v_Input.TexCoord);
 	float depth			= texture(u_RasterDepthImage, v_Input.TexCoord).r;
 	
 	float linearDepth	= LinearizeDepth(depth, NearClip, FarClip) / FarClip;
@@ -115,11 +121,10 @@ void main()
 	float calcLinearDepth = LinearizeDepth(DistToDepth(dist), NearClip, FarClip) / FarClip;
 
 	ivec2 pixel = ivec2(gl_FragCoord.xy);
-	//imageStore(o_Image, pixel, vec4(dist, dist, dist, 1.0));
-	//imageStore(o_Image, pixel, vec4(linearDepth, linearDepth, linearDepth, 1.0));
-	//imageStore(o_Image, pixel, vec4(calcLinearDepth, calcLinearDepth, calcLinearDepth, 1.0));
 
 
 	imageStore(o_Image, pixel, rasterColor);
 	imageStore(o_DepthImage, pixel, vec4(dist, 0, 0, 1));
+	imageStore(o_NormalImage, pixel, rasterNormal);
+	imageStore(o_PositionImage, pixel, rasterPosition);
 }

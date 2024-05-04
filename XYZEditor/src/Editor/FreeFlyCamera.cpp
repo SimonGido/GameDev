@@ -33,7 +33,7 @@ namespace XYZ {
 			const glm::quat orientation = GetOrientation();
 
 			if (Input::IsKeyPressed(KeyCode::KEY_LEFT_SHIFT))
-				cameraSpeed *= 3;
+				cameraSpeed *= 5;
 
 
 			if (Input::IsKeyPressed(KeyCode::KEY_A))
